@@ -150,7 +150,10 @@ function download() {
       <footer class="response-foot">
         <span v-if="evaluation.response.usage.input_tokens !== undefined"
           >输入 {{ evaluation.response.usage.input_tokens.toLocaleString() }} tokens</span
-        ><span v-else>输入 token 数未提供</span><span>输出 token 数未提供</span>
+        ><span v-else>输入 token 数未提供</span>
+        <span v-if="evaluation.response.usage.output_tokens !== undefined"
+          >输出 {{ evaluation.response.usage.output_tokens.toLocaleString() }} tokens</span
+        ><span v-else>输出 N/A token</span>
       </footer>
     </template>
     <div v-else class="empty-result">
