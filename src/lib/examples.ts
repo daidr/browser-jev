@@ -49,23 +49,21 @@ export const examples: Example[] = [
     },
   },
   {
-    id: 'sandwich',
-    title: 'Is it a sandwich?',
-    description: 'Evaluate a proposition with explicit criteria',
+    id: 'feature-request',
+    title: 'Is this a feature request?',
+    description: 'Distinguish new feature requests from praise',
     type: 'noul',
     request: {
       model: 'jev-latest',
-      state: {
-        food: 'Ice cream sandwich',
-        description: 'Ice cream held between two chocolate cookies.',
-      },
+      state:
+        'Please add dark mode. The app only has a light theme, and I would like a darker screen at night.',
       questions: {
-        is_sandwich: {
+        is_feature_request: {
           type: 'noul',
-          instructions: 'Is this food a sandwich under the provided definition?',
+          instructions: 'Does this feedback explicitly request a new feature?',
           criteria: {
-            true: 'A filling enclosed between slices of bread',
-            false: 'No bread, or cookies or wafers used instead of bread',
+            true: 'The user asks to add a capability that is currently missing.',
+            false: 'The user praises an existing feature without requesting any change.',
           },
         },
       },

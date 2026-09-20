@@ -38,18 +38,21 @@ export const chineseExamples: Example[] = [
     },
   },
   {
-    id: 'sandwich',
-    title: '这算三明治吗？',
-    description: '用明确条件判断一个命题',
+    id: 'feature-request',
+    title: '识别功能请求',
+    description: '区分新增功能的请求与对已有功能的评价',
     type: 'noul',
     request: {
       model: 'jev-latest',
-      state: { food: '冰淇淋三明治', description: '两块巧克力饼干中间夹着冰淇淋。' },
+      state: '请增加深色模式。目前应用只有浅色主题，我希望晚上能使用更暗的界面。',
       questions: {
-        is_sandwich: {
+        is_feature_request: {
           type: 'noul',
-          instructions: '根据给定定义，这种食物是三明治吗？',
-          criteria: { true: '面包片之间夹有馅料', false: '没有面包，或者用饼干、威化代替面包' },
+          instructions: '这条反馈是否明确要求新增功能？',
+          criteria: {
+            true: '用户要求添加当前没有的功能。',
+            false: '用户仅赞扬已有功能，没有要求任何改动。',
+          },
         },
       },
     },
