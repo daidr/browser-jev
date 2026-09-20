@@ -83,7 +83,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 <template>
   <div class="app-shell">
     <header class="topbar">
-      <h1>BrowserJev</h1>
+      <div class="brand">
+        <h1>BrowserJev</h1>
+        <p class="attribution">
+          by <a href="https://github.com/daidr" target="_blank" rel="noopener noreferrer">daidr</a>
+        </p>
+      </div>
       <div class="toolbar-actions">
         <select
           v-if="supported && history.length"
@@ -182,9 +187,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
         </template>
       </SplitWorkspace>
     </main>
-    <footer class="attribution">
-      by <a href="https://github.com/daidr" target="_blank" rel="noopener noreferrer">daidr</a>
-    </footer>
     <StatusMessage v-if="notice" class="toast" dismissible @dismiss="notice = ''">{{
       noticeText
     }}</StatusMessage>
@@ -215,11 +217,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-.topbar h1 {
+.brand {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+}
+.brand h1 {
   margin: 0;
   font-size: var(--text-brand);
   font-weight: 600;
   letter-spacing: -0.5px;
+  line-height: 1.2;
 }
 .toolbar-actions {
   display: flex;
@@ -245,11 +253,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   background: var(--surface-hover);
 }
 .attribution {
-  flex-shrink: 0;
-  padding: 0 16px 12px;
+  margin: 0;
   color: var(--muted);
   font-size: 13px;
-  text-align: center;
+  text-align: left;
 }
 .attribution a {
   color: inherit;
