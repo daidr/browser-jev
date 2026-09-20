@@ -40,8 +40,8 @@ function foldButton(icon: typeof ArrowDown01Icon, label: string): HTMLButtonElem
   button.onmousedown = (event) => event.preventDefault()
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   svg.setAttribute('viewBox', '0 0 24 24')
-  svg.setAttribute('width', '14')
-  svg.setAttribute('height', '14')
+  svg.setAttribute('width', '18')
+  svg.setAttribute('height', '18')
   svg.setAttribute('fill', 'none')
   svg.setAttribute('aria-hidden', 'true')
   for (const [tag, attributes] of icon) {
@@ -95,7 +95,7 @@ export const editorSetup = [
   syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
   bracketMatching(),
   closeBrackets(),
-  autocompletion(),
+  autocompletion({ icons: false }),
   rectangularSelection(),
   crosshairCursor(),
   highlightActiveLine(),

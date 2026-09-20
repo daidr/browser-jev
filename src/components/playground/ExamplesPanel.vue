@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { HugeiconsIcon } from '@hugeicons/vue'
-import { ArrowUpRight01Icon } from '@hugeicons/core-free-icons'
+import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { examples, type Example } from '../../lib/examples'
+import PanelHeader from '../ui/PanelHeader.vue'
 defineProps<{ disabled: boolean }>()
 const emit = defineEmits<{ select: [example: Example] }>()
 </script>
 
 <template>
   <section class="examples-panel" aria-label="示例">
-    <header class="panel-header">
-      <div class="section-heading"><h2>示例</h2></div>
-    </header>
+    <PanelHeader title="示例" />
     <div class="examples">
       <button
         v-for="example in examples"
@@ -21,9 +20,9 @@ const emit = defineEmits<{ select: [example: Example] }>()
       >
         <span
           ><strong>{{ example.title }}</strong
-          ><small>{{ example.description }}</small></span
+          ><span class="description">{{ example.description }}</span></span
         >
-        <HugeiconsIcon :icon="ArrowUpRight01Icon" :size="16" aria-hidden="true" />
+        <HugeiconsIcon :icon="ArrowRight01Icon" :size="20" aria-hidden="true" />
       </button>
     </div>
   </section>
@@ -37,7 +36,7 @@ const emit = defineEmits<{ select: [example: Example] }>()
   min-height: 0;
 }
 .examples {
-  padding: 8px 18px;
+  padding: 0 20px;
   overflow: auto;
 }
 .example {
@@ -45,32 +44,36 @@ const emit = defineEmits<{ select: [example: Example] }>()
   width: 100%;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  padding: 20px 8px;
+  gap: 16px;
+  padding: 24px 0;
   border: 0;
   border-bottom: 1px solid var(--border);
   background: transparent;
   text-align: left;
-  color: #75849e;
+  color: var(--muted);
   cursor: pointer;
 }
 .example:last-child {
   border-bottom: 0;
 }
 .example:hover:not(:disabled) {
-  background: #f8faff;
+  background: var(--surface-hover);
+}
+.example > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .example strong {
   display: block;
   color: var(--ink);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: var(--text-body);
+  font-weight: 600;
 }
-.example small {
+.description {
   display: block;
   margin-top: 7px;
-  font-size: 11px;
-  color: #8993a5;
-  line-height: 1.7;
+  font-size: var(--text-meta);
+  color: var(--muted);
+  line-height: 1.6;
 }
 </style>

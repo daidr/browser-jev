@@ -36,21 +36,21 @@ onMounted(() => {
           if (update.docChanged) model.value = update.state.doc.toString()
         }),
         EditorView.theme({
-          '&': { height: '100%', fontSize: '13px' },
+          '&': { height: '100%', fontSize: 'var(--text-body)' },
           '&.cm-focused': { outline: 'none' },
-          '.cm-scroller': { fontFamily: 'var(--font-code)', lineHeight: '1.8', overflow: 'auto' },
-          '.cm-content': { padding: '16px 0', minHeight: '100px' },
+          '.cm-scroller': { fontFamily: 'var(--font-code)', lineHeight: '1.7', overflow: 'auto' },
+          '.cm-content': { padding: '18px 0', minHeight: '100px' },
           '.cm-line': { padding: '0 18px 0 10px' },
           '.cm-gutters': {
             backgroundColor: 'transparent',
-            color: '#a2aabb',
+            color: 'var(--muted)',
             border: 'none',
-            padding: '0 8px 0 12px',
+            padding: '0 4px 0 8px',
           },
           '.cm-activeLineGutter, .cm-activeLine': { backgroundColor: 'transparent' },
           '&.cm-focused .cm-activeLine': { backgroundColor: '#f3f6fc' },
           '.cm-selectionBackground': { backgroundColor: '#dde6ff !important' },
-          '.cm-foldGutter': { width: '20px' },
+          '.cm-foldGutter': { width: '24px' },
           '.cm-foldGutter .cm-gutterElement': {
             display: 'flex',
             alignItems: 'center',
@@ -61,8 +61,8 @@ onMounted(() => {
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '20px',
-            height: '20px',
+            width: '24px',
+            height: '24px',
             padding: '0',
             border: 'none',
             borderRadius: '4px',
@@ -74,7 +74,7 @@ onMounted(() => {
           '.cm-foldControl:hover': { background: '#e9eef8', color: '#63718a' },
           '.cm-foldPlaceholder': {
             width: '24px',
-            height: '18px',
+            height: '24px',
             margin: '0 3px',
             background: '#f0f3f9',
             color: '#75849e',
@@ -116,5 +116,24 @@ onBeforeUnmount(() => view?.destroy())
 }
 .code-editor:focus-within {
   box-shadow: inset 2px 0 var(--blue);
+}
+/* CodeMirror's built-in panels and tooltips use smaller fonts by default. */
+.code-editor :deep(.cm-editor *),
+.code-editor :deep(.cm-editor .cm-panel *),
+.code-editor :deep(.cm-editor *::before),
+.code-editor :deep(.cm-editor *::after) {
+  font-size: inherit;
+}
+.code-editor :deep(.cm-panel button),
+.code-editor :deep(.cm-panel input:not([type='checkbox'])) {
+  min-height: 40px;
+}
+.code-editor :deep(.cm-search) {
+  padding: 12px;
+}
+.code-editor :deep(.cm-search input[type='checkbox']) {
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
 }
 </style>

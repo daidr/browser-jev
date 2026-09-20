@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, useTemplateRef, watch } from 'vue'
+import AppButton from '../ui/AppButton.vue'
 const props = defineProps<{ open: boolean; progress: number | null; downloading: boolean }>()
 const emit = defineEmits<{ cancel: [] }>()
 const dialog = useTemplateRef<HTMLDialogElement>('dialog')
@@ -30,13 +31,13 @@ watch(
       <span v-if="progress !== null">{{ Math.floor(progress * 100) }}%</span>
     </div>
     <progress :value="progress ?? undefined" max="1" :aria-label="heading" />
-    <footer><button class="button" autofocus @click="emit('cancel')">取消</button></footer>
+    <footer><AppButton label="取消" autofocus @click="emit('cancel')" /></footer>
   </dialog>
 </template>
 
 <style scoped>
 .download-dialog {
-  width: min(420px, calc(100vw - 32px));
+  width: min(480px, calc(100vw - 32px));
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 26px;
@@ -48,16 +49,17 @@ watch(
   background: #17213a50;
 }
 h2 {
-  font-size: 16px;
+  font-size: var(--text-heading);
   font-weight: 600;
   margin: 0 0 22px;
 }
 .progress-label {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
-  font-size: 12px;
-  color: #69758c;
+  font-size: var(--text-meta);
+  color: var(--muted);
   margin-bottom: 10px;
   font-variant-numeric: tabular-nums;
 }

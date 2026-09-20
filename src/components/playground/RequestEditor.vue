@@ -1,56 +1,45 @@
 <script setup lang="ts">
-import { HugeiconsIcon } from '@hugeicons/vue'
-import {
-  SourceCodeIcon,
-  TextAlignLeftIcon,
-  Add01Icon,
-  TextWrapIcon,
-} from '@hugeicons/core-free-icons'
+import { TextWrapIcon } from '@hugeicons/core-free-icons'
 import { defineAsyncComponent } from 'vue'
 import type { Question } from '../../lib/contract'
+import AppButton from '../ui/AppButton.vue'
+import PanelHeader from '../ui/PanelHeader.vue'
+import SegmentedControl from '../ui/SegmentedControl.vue'
+import StatusMessage from '../ui/StatusMessage.vue'
 const CodeEditor = defineAsyncComponent(() => import('./CodeEditor.vue'))
 
 const state = defineModel<string>('state', { required: true })
 const questions = defineModel<string>('questions', { required: true })
-defineProps<{
-  stateMode: 'text' | 'json'
-  disabled: boolean
-  validationError: string
-  questionCount: number
-}>()
+defineProps<{ stateMode: 'text' | 'json'; disabled: boolean; validationError: string }>()
 const emit = defineEmits<{
   mode: [mode: 'text' | 'json']
   add: [type: Question['type']]
   format: []
 }>()
+const stateModes = [
+  { value: 'text', label: '文本' },
+  { value: 'json', label: 'JSON' },
+] as const
+function addQuestion(event: Event) {
+  const select = event.target as HTMLSelectElement
+  const type = select.value
+  if (type === 'noul' || type === 'choice' || type === 'score') emit('add', type)
+  select.value = ''
+}
 </script>
 
 <template>
   <div class="request-editor">
     <section class="state-section">
-      <header class="panel-header">
-        <div class="section-heading">
-          <h2>State</h2>
-        </div>
-        <div class="segmented small" aria-label="State 格式">
-          <button
-            :aria-pressed="stateMode === 'text'"
-            :disabled="disabled"
-            title="纯文本"
-            @click="emit('mode', 'text')"
-          >
-            <HugeiconsIcon :icon="TextAlignLeftIcon" :size="14" aria-hidden="true" />文本
-          </button>
-          <button
-            :aria-pressed="stateMode === 'json'"
-            :disabled="disabled"
-            title="JSON"
-            @click="emit('mode', 'json')"
-          >
-            <HugeiconsIcon :icon="SourceCodeIcon" :size="14" aria-hidden="true" />JSON
-          </button>
-        </div>
-      </header>
+      <PanelHeader title="State">
+        <SegmentedControl
+          :model-value="stateMode"
+          label="State 格式"
+          :options="stateModes"
+          :disabled="disabled"
+          @update:model-value="emit('mode', $event)"
+        />
+      </PanelHeader>
       <div class="state-code">
         <CodeEditor
           v-model="state"
@@ -61,38 +50,34 @@ const emit = defineEmits<{
       </div>
     </section>
     <section class="questions-section">
-      <header class="panel-header">
-        <div class="section-heading">
-          <h2>Questions</h2>
-          <span class="count">{{ questionCount }}</span>
-        </div>
-        <button
-          class="text-button"
+      <PanelHeader title="Questions">
+        <select
+          class="control-select"
+          aria-label="添加问题"
+          value=""
           :disabled="disabled"
-          title="格式化 Questions JSON"
-          @click="emit('format')"
+          @change="addQuestion"
         >
-          <HugeiconsIcon :icon="TextWrapIcon" :size="15" aria-hidden="true" />格式化
-        </button>
-      </header>
-      <div class="primitive-tools">
-        <span>添加问题</span>
-        <button class="primitive-button noul" :disabled="disabled" @click="emit('add', 'noul')">
-          <HugeiconsIcon :icon="Add01Icon" :size="12" aria-hidden="true" /> Noul
-        </button>
-        <button class="primitive-button choice" :disabled="disabled" @click="emit('add', 'choice')">
-          <HugeiconsIcon :icon="Add01Icon" :size="12" aria-hidden="true" /> Choice
-        </button>
-        <button class="primitive-button score" :disabled="disabled" @click="emit('add', 'score')">
-          <HugeiconsIcon :icon="Add01Icon" :size="12" aria-hidden="true" /> Score
-        </button>
-      </div>
+          <option disabled value="">添加问题</option>
+          <option value="noul">Noul</option>
+          <option value="choice">Choice</option>
+          <option value="score">Score</option>
+        </select>
+        <AppButton
+          label="格式化 Questions JSON"
+          :icon="TextWrapIcon"
+          icon-only
+          variant="quiet"
+          :disabled="disabled"
+          @click="emit('format')"
+        />
+      </PanelHeader>
       <div class="questions-code">
         <CodeEditor v-model="questions" label="Questions 编辑器" :readonly="disabled" />
       </div>
-      <footer v-if="validationError" class="validation" role="status">
-        {{ validationError }}
-      </footer>
+      <StatusMessage v-if="validationError" class="validation" tone="error">{{
+        validationError
+      }}</StatusMessage>
     </section>
   </div>
 </template>
@@ -101,64 +86,34 @@ const emit = defineEmits<{
 .request-editor {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 0;
+  flex: 1;
+  min-height: 430px;
 }
 .state-section {
   display: flex;
   flex-direction: column;
-  flex: 0 0 34%;
-  min-height: 145px;
+  flex: 0 0 auto;
+  height: 36%;
+  min-height: 190px;
   border-bottom: 1px solid var(--border);
   resize: vertical;
   overflow: auto;
-  max-height: 65%;
+  max-height: min(60%, calc(100% - 240px));
 }
-.state-code {
+.state-code,
+.questions-code {
   flex: 1;
-  min-height: 90px;
+  min-height: 80px;
 }
 .questions-section {
   display: flex;
   flex: 1;
   flex-direction: column;
-  min-height: 210px;
-}
-.questions-code {
-  flex: 1;
-  min-height: 140px;
-}
-.primitive-tools {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 7px;
-  padding: 10px 18px;
-  border-bottom: 1px solid #f0f2f7;
-  font-size: 11px;
-  color: var(--muted);
-}
-.primitive-tools > span {
-  margin-right: auto;
-}
-.primitive-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  border: 0;
-  border-radius: 5px;
-  padding: 4px 8px;
-  font-size: 11px;
-  cursor: pointer;
+  min-height: 240px;
 }
 .validation {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 11px 18px;
-  font-size: 11px;
   border-top: 1px solid var(--border);
-  color: #ab4a27;
-  overflow-wrap: anywhere;
+  max-height: 35%;
+  overflow: auto;
 }
 </style>

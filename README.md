@@ -9,7 +9,7 @@ bun install
 bun run dev
 ```
 
-在桌面 Chrome 中打开 `http://127.0.0.1:5173`，从结果面板选择示例或编辑输入，然后点击「运行请求」（Ctrl / ⌘ + Enter）。首次运行自动准备模型；需要下载时弹出进度窗口，准备完成后自动执行本次请求。可取消并重新运行。`bun run build` 构建；`bun run preview` 预览构建结果；`bun test` 运行契约、工作台状态和会话生命周期测试。
+在桌面 Chrome 中打开 `http://127.0.0.1:5173`，从结果面板选择示例或编辑输入，然后点击「运行」（Ctrl / ⌘ + Enter）。首次运行自动准备模型；需要下载时弹出进度窗口，准备完成后自动执行本次请求。可取消并重新运行。`bun run build` 构建；`bun run preview` 预览构建结果；`bun test` 运行契约、工作台状态和会话生命周期测试。
 
 Chrome 官方文档当前列出 Web Prompt API 从 Chrome 148 提供，要求安全上下文（HTTPS 或 localhost）及符合要求的设备。程序以 API 检测和 `LanguageModel.availability()` 的实际结果为准；不支持或模型不可用时，以简短提示替代输入和结果面板。下载进度取自浏览器的 `downloadprogress`，尚未收到数值时使用不确定进度条。不会替用户修改浏览器设置。[Chrome 文档](https://developer.chrome.com/docs/ai/prompt-api)
 
@@ -19,6 +19,7 @@ Chrome 官方文档当前列出 Web Prompt API 从 Chrome 148 提供，要求安
 
 - State 文本／JSON；CodeMirror JSON 编辑器，折叠控件使用 Hugeicons SVG；Questions 混合 Noul、Choice、Score；快速添加模板、格式化、即时校验。
 - 无侧栏的双面板工作台；输入为空时在结果面板展示五组示例；拖动或键盘调整输入／结果宽度；左右／上下布局；窄屏自动堆叠。
+- 正文和代码 18px、辅助文字最小 17px；面板工具栏自动换行。按钮、切换控件、面板标题、提示、结果卡片和概率分布使用独立组件。
 - 本地模型初始化、下载进度、取消、错误提示、上下文容量检查；每次请求使用全新克隆，防止上下文串扰。
 - 概率分布、Choice 选择、Score 加权结果、Noul 真值概率；结果展开／收起；原始 JSON、复制和下载。
 - 修改输入后明确标记旧结果。
