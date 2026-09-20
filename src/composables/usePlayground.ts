@@ -192,17 +192,6 @@ export function usePlayground(environment: Partial<Environment> = {}) {
       evaluation.value = item
     }
   }
-  function importRequest(text: string) {
-    if (busy.value) return false
-    try {
-      applyRequest(validateRequest(JSON.parse(text)))
-      notice.value = '请求已导入'
-      return true
-    } catch (e) {
-      error.value = errorMessage(e)
-      return false
-    }
-  }
   function addQuestion(type: Question['type']) {
     if (busy.value) return
     try {
@@ -324,7 +313,6 @@ export function usePlayground(environment: Partial<Environment> = {}) {
     cancel,
     selectExample,
     loadHistory,
-    importRequest,
     addQuestion,
     setStateMode,
     formatQuestions,

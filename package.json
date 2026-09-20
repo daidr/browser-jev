@@ -12,12 +12,16 @@
     "check": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.11.1",
     "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/search": "^6.7.2",
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.38.0",
     "@hugeicons/core-free-icons": "^4.3.4",
     "@hugeicons/vue": "^1.0.8",
-    "codemirror": "^6.0.2",
     "vue": "^3.5.0"
   },
   "devDependencies": {

@@ -15,11 +15,11 @@ Chrome 官方文档当前列出 Web Prompt API 从 Chrome 148 提供，要求安
 
 ## 已实现
 
-- State 文本／JSON；CodeMirror JSON 编辑器；Questions 混合 Noul、Choice、Score；快速添加模板、格式化、即时校验。
+- State 文本／JSON；CodeMirror JSON 编辑器，折叠控件使用 Hugeicons SVG；Questions 混合 Noul、Choice、Score；快速添加模板、格式化、即时校验。
 - 无侧栏的双面板工作台；输入为空时在结果面板展示五组示例；拖动或键盘调整输入／结果宽度；左右／上下布局；窄屏自动堆叠。
 - 本地模型初始化、下载进度、取消、错误提示、上下文容量检查；每次请求使用全新克隆，防止上下文串扰。
 - 概率分布、Choice 选择、Score 加权结果、Noul 真值概率；结果展开／收起；原始 JSON、复制和下载。
-- 完整 Jev 请求导入／导出、实际生成 Schema、模型原文检查；修改输入后明确标记旧结果。
+- 修改输入后明确标记旧结果。
 - 新草稿默认空白；已有草稿和最近 10 次成功运行保存在当前浏览器的 localStorage。历史入口位于顶部，始终关联运行时请求快照，重新载入时会重新校验。
 
 ## 兼容范围
@@ -39,7 +39,7 @@ Chrome 官方文档当前列出 Web Prompt API 从 Chrome 148 提供，要求安
 }
 ```
 
-输出保留 `model / answers / usage` 和三个 primitive 的字段。`model` 始终为 `chrome-prompt-api`，输入的 Jev 名称仅为兼容导入而保留，不会选择或调用 Jev。Chrome 不提供底层模型版本号，因此不伪装成 `jev-*` 或某个 Gemini Nano 版本。
+输出保留 `model / answers / usage` 和三个 primitive 的字段。`model` 始终为 `chrome-prompt-api`，输入的 Jev 名称仅为兼容 Jev 请求而保留，不会选择或调用 Jev。Chrome 不提供底层模型版本号，因此不伪装成 `jev-*` 或某个 Gemini Nano 版本。
 
 | Primitive | 输入 criteria                   | 输出字段                                       |
 | --------- | ------------------------------- | ---------------------------------------------- |

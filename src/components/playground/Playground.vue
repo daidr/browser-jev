@@ -2,7 +2,6 @@
 import { computed, onBeforeUnmount, onMounted, shallowRef, useTemplateRef } from 'vue'
 import { HugeiconsIcon } from '@hugeicons/vue'
 import {
-  SourceCodeIcon,
   Layout2ColumnIcon,
   Layout2RowIcon,
   RotateLeft01Icon,
@@ -15,7 +14,6 @@ import RequestEditor from './RequestEditor.vue'
 import ResponsePanel from './ResponsePanel.vue'
 import ExamplesPanel from './ExamplesPanel.vue'
 import ModelDownloadDialog from './ModelDownloadDialog.vue'
-import InspectorDialog from './InspectorDialog.vue'
 
 const {
   stateText,
@@ -39,13 +37,11 @@ const {
   cancel,
   selectExample,
   loadHistory,
-  importRequest,
   addQuestion,
   setStateMode,
   formatQuestions,
   clear,
 } = usePlayground()
-const inspectOpen = shallowRef(false)
 const stacked = shallowRef(false)
 const split = shallowRef(50)
 const dragging = shallowRef(false)
@@ -78,7 +74,7 @@ function keyboardResize(event: KeyboardEvent) {
   }
 }
 function shortcut(event: KeyboardEvent) {
-  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !inspectOpen.value) {
+  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
     event.preventDefault()
     void run()
   }
@@ -91,9 +87,6 @@ function selectHistory(event: Event) {
 }
 onMounted(() => window.addEventListener('keydown', shortcut))
 onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
-function applyImport(value: string) {
-  if (importRequest(value)) inspectOpen.value = false
-}
 </script>
 
 <template>
@@ -117,9 +110,6 @@ function applyImport(value: string) {
         </select>
         <button class="text-button" :disabled="busy" @click="clear">
           <HugeiconsIcon :icon="RotateLeft01Icon" :size="13" aria-hidden="true" />清空
-        </button>
-        <button class="button compact" @click="inspectOpen = true">
-          <HugeiconsIcon :icon="SourceCodeIcon" :size="14" aria-hidden="true" />请求 / Schema
         </button>
         <div class="segmented layout-switch">
           <button
@@ -234,13 +224,6 @@ function applyImport(value: string) {
       :progress="progress"
       :downloading="availability !== 'available'"
       @cancel="cancel"
-    />
-    <InspectorDialog
-      v-model="inspectOpen"
-      :request="validation.request"
-      :evaluation="evaluation"
-      :busy="busy"
-      @import="applyImport"
     />
   </div>
 </template>

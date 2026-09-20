@@ -2,8 +2,8 @@
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
 import { EditorState, Compartment } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
-import { basicSetup } from 'codemirror'
 import { json } from '@codemirror/lang-json'
+import { editorSetup } from '../../lib/editor-setup'
 
 const model = defineModel<string>({ required: true })
 const props = withDefaults(
@@ -20,7 +20,7 @@ onMounted(() => {
     state: EditorState.create({
       doc: model.value,
       extensions: [
-        basicSetup,
+        editorSetup,
         EditorView.lineWrapping,
         language.of(props.jsonMode ? json() : []),
         editable.of([
@@ -50,7 +50,35 @@ onMounted(() => {
           '.cm-activeLineGutter, .cm-activeLine': { backgroundColor: 'transparent' },
           '&.cm-focused .cm-activeLine': { backgroundColor: '#f3f6fc' },
           '.cm-selectionBackground': { backgroundColor: '#dde6ff !important' },
-          '.cm-foldGutter': { width: '10px' },
+          '.cm-foldGutter': { width: '20px' },
+          '.cm-foldGutter .cm-gutterElement': {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0',
+          },
+          '.cm-foldControl': {
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '20px',
+            height: '20px',
+            padding: '0',
+            border: 'none',
+            borderRadius: '4px',
+            background: 'transparent',
+            color: 'inherit',
+            cursor: 'pointer',
+            verticalAlign: 'middle',
+          },
+          '.cm-foldControl:hover': { background: '#e9eef8', color: '#63718a' },
+          '.cm-foldPlaceholder': {
+            width: '24px',
+            height: '18px',
+            margin: '0 3px',
+            background: '#f0f3f9',
+            color: '#75849e',
+          },
         }),
       ],
     }),
