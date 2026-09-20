@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, shallowRef } from 'vue'
-import { Check, Copy, ArrowDownToLine, Activity, ScanLine, ChevronDown } from 'lucide-vue-next'
+import { Check, Copy, ArrowDownToLine, Activity, ChevronDown } from 'lucide-vue-next'
 import { describe, pretty, type JevRequest, type Answer, type Question } from '../../lib/contract'
 import type { Evaluation } from '../../lib/prompt-api'
 const CodeEditor = defineAsyncComponent(() => import('./CodeEditor.vue'))
@@ -148,11 +148,6 @@ function download() {
       </footer>
     </template>
     <div v-else class="empty-result">
-      <div class="empty-intro">
-        <div class="empty-icon"><ScanLine :size="26" :stroke-width="1.4" /></div>
-        <h3>让上下文变成决策</h3>
-        <p>编辑左侧内容，运行一次请求。<br />在这里查看每个问题的答案和概率分布。</p>
-      </div>
       <div v-if="rows.length" class="preview-list">
         <span class="preview-title">本次将评估</span>
         <div v-for="row in rows" :key="row.id" class="preview-row">
@@ -161,20 +156,6 @@ function download() {
           ><span class="placeholder-value">—</span>
         </div>
       </div>
-      <div class="empty-flow">
-        <span>State</span><i /> <span>Questions</span><i /><span>Decisions</span>
-      </div>
-    </div>
-    <div class="probability-note">
-      <span class="note-dot">i</span>
-      <p>
-        概率为本地生成模型的估计值，未经 Jev 校准。Confidence 使用归一化信息熵计算。<a
-          href="https://docs.typesafe.ai/confidence"
-          target="_blank"
-          rel="noreferrer"
-          >了解区别</a
-        >
-      </p>
     </div>
   </section>
 </template>
@@ -328,36 +309,6 @@ function download() {
 .score .bar {
   background: #9c83c6;
 }
-.probability-note {
-  margin-top: auto;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  background: #f9fafc;
-  padding: 12px 18px;
-  border-top: 1px solid var(--border);
-  color: #8993a5;
-}
-.probability-note p {
-  margin: 0;
-  font-size: 9px;
-  line-height: 1.8;
-}
-.probability-note a {
-  color: #647dab;
-  margin-left: 5px;
-}
-.note-dot {
-  font-size: 8px;
-  border: 1px solid #a9b2c3;
-  border-radius: 50%;
-  height: 11px;
-  width: 11px;
-  text-align: center;
-  line-height: 10px;
-  flex-shrink: 0;
-  margin-top: 3px;
-}
 .response-foot {
   display: flex;
   gap: 15px;
@@ -374,37 +325,10 @@ function download() {
 .empty-result {
   flex: 1;
   overflow: auto;
-  padding: 36px 28px 25px;
-}
-.empty-intro {
-  text-align: center;
-  margin: 12px auto 37px;
-}
-.empty-icon {
-  display: inline-grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  background: #f1f5fd;
-  color: #6884c4;
-  border: 1px solid #e4ebf8;
-  border-radius: 17px;
-}
-.empty-intro h3 {
-  font-size: 18px;
-  font-weight: 550;
-  margin: 20px 0 11px;
-  letter-spacing: -0.3px;
-}
-.empty-intro p {
-  font-size: 11px;
-  color: #929bad;
-  line-height: 1.9;
-  margin: 0;
+  padding: 24px 20px;
 }
 .preview-list {
-  max-width: 380px;
-  margin: auto;
+  width: 100%;
 }
 .preview-title {
   font-size: 10px;
@@ -435,20 +359,6 @@ function download() {
 .placeholder-value {
   color: #b3bbca;
   padding: 0 4px;
-}
-.empty-flow {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  align-items: center;
-  color: #a5afbf;
-  font-size: 9px;
-  margin-top: 40px;
-}
-.empty-flow i {
-  width: 20px;
-  height: 1px;
-  background: #dce3ef;
 }
 .running-banner,
 .stale-banner {

@@ -80,7 +80,7 @@ export class PromptEngine {
   }
 
   async evaluate(request: JevRequest, signal: AbortSignal): Promise<Evaluation> {
-    if (!this.base) throw new Error('请先启用本地模型')
+    if (!this.base) throw new Error('模型尚未准备好，请重新运行')
     signal.throwIfAborted()
     const start = performance.now()
     const session = await this.base.clone({ signal })
@@ -135,7 +135,7 @@ export function errorMessage(error: unknown): string {
   if (error instanceof Error) {
     if (error.name === 'AbortError') return '已取消。可以修改输入后重新运行。'
     if (error.name === 'NotAllowedError')
-      return 'Chrome 尚未允许模型初始化。请点击「启用本地模型」并保持页面可见。'
+      return 'Chrome 尚未允许模型初始化。请点击「运行请求」并保持页面可见。'
     if (error.name === 'NotSupportedError')
       return '当前 Chrome 不支持所选语言或 JSON Schema 约束。请更新 Chrome 并检查模型可用性。'
     if (error.name === 'QuotaExceededError')

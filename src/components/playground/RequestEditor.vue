@@ -24,9 +24,7 @@ const emit = defineEmits<{
     <section class="state-section">
       <header class="panel-header">
         <div class="section-heading">
-          <span class="step-dot">1</span>
           <h2>State</h2>
-          <span class="hint">待判断的上下文</span>
         </div>
         <div class="segmented small" aria-label="State 格式">
           <button
@@ -55,15 +53,10 @@ const emit = defineEmits<{
           :readonly="disabled"
         />
       </div>
-      <footer class="editor-foot">
-        <span>给模型事实，再用问题定义判断。</span
-        ><span>{{ state.length.toLocaleString() }} 字符</span>
-      </footer>
     </section>
     <section class="questions-section">
       <header class="panel-header">
         <div class="section-heading">
-          <span class="step-dot">2</span>
           <h2>Questions</h2>
           <span class="count">{{ questionCount }}</span>
         </div>
@@ -91,8 +84,8 @@ const emit = defineEmits<{
       <div class="questions-code">
         <CodeEditor v-model="questions" label="Questions 编辑器" :readonly="disabled" />
       </div>
-      <footer class="validation" :class="{ invalid: validationError }" aria-live="polite">
-        <span class="status-dot" />{{ validationError || '请求有效 · 所有问题将一起评估' }}
+      <footer v-if="validationError" class="validation" role="status">
+        {{ validationError }}
       </footer>
     </section>
   </div>
@@ -109,7 +102,7 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   flex: 0 0 34%;
-  min-height: 195px;
+  min-height: 145px;
   border-bottom: 1px solid var(--border);
   resize: vertical;
   overflow: auto;
@@ -123,25 +116,15 @@ const emit = defineEmits<{
   display: flex;
   flex: 1;
   flex-direction: column;
-  min-height: 240px;
+  min-height: 210px;
 }
 .questions-code {
   flex: 1;
   min-height: 140px;
 }
-.step-dot {
-  width: 21px;
-  height: 21px;
-  display: inline-grid;
-  place-items: center;
-  background: #edf2fe;
-  color: var(--blue);
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-}
 .primitive-tools {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 7px;
   padding: 10px 18px;
@@ -162,14 +145,6 @@ const emit = defineEmits<{
   font-size: 11px;
   cursor: pointer;
 }
-.editor-foot {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 18px 11px;
-  gap: 12px;
-  color: var(--muted);
-  font-size: 10px;
-}
 .validation {
   display: flex;
   align-items: center;
@@ -177,19 +152,7 @@ const emit = defineEmits<{
   padding: 11px 18px;
   font-size: 11px;
   border-top: 1px solid var(--border);
-  color: var(--teal);
-  overflow-wrap: anywhere;
-}
-.invalid {
   color: #ab4a27;
-}
-.hint {
-  font-size: 11px;
-  color: var(--muted);
-}
-@media (max-width: 1200px) {
-  .hint {
-    display: none;
-  }
+  overflow-wrap: anywhere;
 }
 </style>

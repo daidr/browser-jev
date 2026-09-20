@@ -8,7 +8,7 @@ import {
   type Question,
 } from '../lib/contract'
 import { restoreHistory } from '../lib/history'
-import { examples, questionTemplate, type Example } from '../lib/examples'
+import { questionTemplate, type Example } from '../lib/examples'
 import {
   errorMessage,
   getModelFactory,
@@ -17,21 +17,33 @@ import {
   type Availability,
   type Evaluation,
   type Language,
+  type ModelFactory,
 } from '../lib/prompt-api'
 
 const DRAFT_KEY = 'browserjev.draft.v1'
 const HISTORY_KEY = 'browserjev.history.v1'
-export function usePlayground() {
-  const first = examples[0]!
-  const title = shallowRef(first.title)
-  const stateText = shallowRef(pretty(first.request.state))
-  const stateMode = shallowRef<'text' | 'json'>('json')
-  const questionsText = shallowRef(pretty(first.request.questions))
-  const requestedModel = shallowRef(first.request.model)
+interface Environment {
+  getFactory: () => ModelFactory | undefined
+  isSecureContext: () => boolean
+  storage: Pick<Storage, 'getItem' | 'setItem'>
+}
+
+export function usePlayground(environment: Partial<Environment> = {}) {
+  const getFactory = environment.getFactory ?? getModelFactory
+  const isSecureContext = environment.isSecureContext ?? (() => window.isSecureContext)
+  const storage = environment.storage ?? {
+    getItem: (key: string) => localStorage.getItem(key),
+    setItem: (key: string, value: string) => localStorage.setItem(key, value),
+  }
+  const title = shallowRef('自定义请求')
+  const stateText = shallowRef('')
+  const stateMode = shallowRef<'text' | 'json'>('text')
+  const questionsText = shallowRef('{}')
+  const requestedModel = shallowRef('jev-latest')
   const language = shallowRef<Language>('en')
   const availability = shallowRef<Availability | 'unsupported' | 'checking'>('checking')
   const phase = shallowRef<'idle' | 'initializing' | 'ready' | 'running'>('idle')
-  const progress = shallowRef(0)
+  const progress = shallowRef<number | null>(null)
   const error = shallowRef('')
   const notice = shallowRef('')
   const evaluation = shallowRef<Evaluation | null>(null)
@@ -41,6 +53,25 @@ export function usePlayground() {
   let capabilityVersion = 0
   let disposed = false
   const busy = computed(() => phase.value === 'initializing' || phase.value === 'running')
+  const supported = computed(() =>
+    ['available', 'downloadable', 'downloading'].includes(availability.value),
+  )
+  const inputEmpty = computed(() => {
+    try {
+      const state =
+        stateMode.value === 'json' && stateText.value.trim()
+          ? JSON.parse(stateText.value)
+          : stateText.value
+      const questions = JSON.parse(questionsText.value.trim() || '{}')
+      const emptyState =
+        typeof state === 'string'
+          ? !state.trim()
+          : (Array.isArray(state) || isRecord(state)) && Object.keys(state).length === 0
+      return emptyState && isRecord(questions) && Object.keys(questions).length === 0
+    } catch {
+      return false
+    }
+  })
   const validation = computed(() => {
     try {
       let state: unknown = stateText.value
@@ -53,7 +84,7 @@ export function usePlayground() {
       }
       let questions: unknown
       try {
-        questions = JSON.parse(questionsText.value)
+        questions = JSON.parse(questionsText.value.trim() || '{}')
       } catch (error) {
         throw new Error(`Questions JSON: ${errorMessage(error)}`)
       }
@@ -69,14 +100,14 @@ export function usePlayground() {
     () =>
       !!evaluation.value && pretty(evaluation.value.request) !== pretty(validation.value.request),
   )
-  const canRun = computed(
-    () => !!validation.value.request && !busy.value && phase.value === 'ready',
-  )
+  const canRun = computed(() => !!validation.value.request && !busy.value && supported.value)
 
   async function checkAvailability() {
+    if (busy.value || disposed) return
     const version = ++capabilityVersion
-    const factory = getModelFactory()
-    if (!factory || !window.isSecureContext) {
+    const factory = getFactory()
+    error.value = ''
+    if (!factory || !isSecureContext()) {
       availability.value = 'unsupported'
       return
     }
@@ -91,55 +122,52 @@ export function usePlayground() {
       }
     }
   }
-  async function initialize() {
-    if (busy.value) return
-    const factory = getModelFactory()
+  async function run() {
+    if (!canRun.value || !validation.value.request || disposed) return
+    const factory = getFactory()
     if (!factory) {
       availability.value = 'unsupported'
       return
     }
-    error.value = ''
-    progress.value = 0
-    phase.value = 'initializing'
-    controller = new AbortController()
+    const request = structuredClone(validation.value.request)
+    let ready = phase.value === 'ready'
     engine ??= new PromptEngine(factory)
+    error.value = ''
+    notice.value = ''
     try {
-      await engine.initialize(language.value, controller.signal, (value) => {
-        progress.value = value
-      })
-      if (!disposed) {
-        phase.value = 'ready'
+      if (!ready) {
+        progress.value = null
+        phase.value = 'initializing'
+        controller = new AbortController()
+        const signal = controller.signal
+        // Keep create() on the click's call stack to preserve user activation.
+        await engine.initialize(language.value, signal, (value) => {
+          if (!signal.aborted && !disposed) progress.value = value
+        })
+        signal.throwIfAborted()
+        if (disposed) return
+        ready = true
         availability.value = 'available'
       }
-    } catch (e) {
-      if (!disposed) {
-        error.value = errorMessage(e)
-        phase.value = 'idle'
-      }
-    } finally {
-      controller = undefined
-    }
-  }
-  async function run() {
-    if (!canRun.value || !engine || !validation.value.request) return
-    const request = structuredClone(validation.value.request)
-    phase.value = 'running'
-    error.value = ''
-    controller = new AbortController()
-    try {
+      // Cancelling inference must not abort the reusable base session's create signal.
+      controller = new AbortController()
+      phase.value = 'running'
       const result = await engine.evaluate(request, controller.signal)
       if (disposed) return
       evaluation.value = result
       history.value = [result, ...history.value].slice(0, 10)
       try {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(history.value))
+        storage.setItem(HISTORY_KEY, JSON.stringify(history.value))
       } catch {
         notice.value = '浏览器存储已满，本次历史仅保留在当前页面。'
       }
     } catch (e) {
-      if (!disposed) error.value = errorMessage(e)
+      if (!disposed) {
+        if (controller?.signal.aborted) notice.value = '已取消'
+        else error.value = errorMessage(e)
+      }
     } finally {
-      if (!disposed) phase.value = 'ready'
+      if (!disposed) phase.value = ready ? 'ready' : 'idle'
       controller = undefined
     }
   }
@@ -165,9 +193,10 @@ export function usePlayground() {
     }
   }
   function importRequest(text: string) {
+    if (busy.value) return false
     try {
       applyRequest(validateRequest(JSON.parse(text)))
-      notice.value = '请求已导入，推理仍由 Chrome 本地模型执行。'
+      notice.value = '请求已导入'
       return true
     } catch (e) {
       error.value = errorMessage(e)
@@ -177,7 +206,7 @@ export function usePlayground() {
   function addQuestion(type: Question['type']) {
     if (busy.value) return
     try {
-      const q = JSON.parse(questionsText.value)
+      const q = JSON.parse(questionsText.value.trim() || '{}')
       if (!isRecord(q)) throw new Error('Questions 必须是对象')
       const base = validateRequest({
         model: LOCAL_MODEL,
@@ -208,8 +237,9 @@ export function usePlayground() {
     stateMode.value = mode
   }
   function formatQuestions() {
+    if (busy.value) return
     try {
-      questionsText.value = pretty(JSON.parse(questionsText.value))
+      questionsText.value = pretty(JSON.parse(questionsText.value.trim() || '{}'))
     } catch {
       error.value = 'Questions JSON 格式有误，无法格式化。'
     }
@@ -230,7 +260,7 @@ export function usePlayground() {
   })
   watch([stateText, stateMode, questionsText, requestedModel, title], () => {
     try {
-      localStorage.setItem(
+      storage.setItem(
         DRAFT_KEY,
         JSON.stringify({
           stateText: stateText.value,
@@ -246,7 +276,7 @@ export function usePlayground() {
   })
   onMounted(() => {
     try {
-      const stored = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? 'null')
+      const stored = JSON.parse(storage.getItem(DRAFT_KEY) ?? 'null')
       if (
         stored &&
         typeof stored.stateText === 'string' &&
@@ -259,10 +289,10 @@ export function usePlayground() {
         if (typeof stored.model === 'string') requestedModel.value = stored.model
         if (typeof stored.title === 'string') title.value = stored.title
       }
-      const saved: unknown = JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]')
+      const saved: unknown = JSON.parse(storage.getItem(HISTORY_KEY) ?? '[]')
       history.value = restoreHistory(saved)
     } catch {
-      notice.value = '存储的草稿无法读取，已载入默认示例。'
+      notice.value = '无法读取保存的草稿或历史'
     }
     void checkAvailability()
   })
@@ -285,11 +315,12 @@ export function usePlayground() {
     evaluation,
     history,
     busy,
+    supported,
+    inputEmpty,
     validation,
     stale,
     canRun,
     checkAvailability,
-    initialize,
     run,
     cancel,
     selectExample,

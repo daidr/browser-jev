@@ -1,26 +1,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, shallowRef, useTemplateRef } from 'vue'
-import {
-  ArrowUpRight,
-  Braces,
-  Columns2,
-  Rows2,
-  RotateCcw,
-  Play,
-  Square,
-  ShieldCheck,
-  X,
-  CheckCheck,
-} from 'lucide-vue-next'
+import { Braces, Columns2, Rows2, RotateCcw, Play, Square, X } from 'lucide-vue-next'
 import { usePlayground } from '../../composables/usePlayground'
-import ExampleSidebar from './ExampleSidebar.vue'
 import RequestEditor from './RequestEditor.vue'
 import ResponsePanel from './ResponsePanel.vue'
-import ModelStatus from './ModelStatus.vue'
+import ExamplesPanel from './ExamplesPanel.vue'
+import ModelDownloadDialog from './ModelDownloadDialog.vue'
 import InspectorDialog from './InspectorDialog.vue'
 
 const {
-  title,
   stateText,
   stateMode,
   questionsText,
@@ -33,11 +21,12 @@ const {
   evaluation,
   history,
   busy,
+  supported,
+  inputEmpty,
   validation,
   stale,
   canRun,
   checkAvailability,
-  initialize,
   run,
   cancel,
   selectExample,
@@ -50,7 +39,7 @@ const {
 } = usePlayground()
 const inspectOpen = shallowRef(false)
 const stacked = shallowRef(false)
-const split = shallowRef(53)
+const split = shallowRef(50)
 const dragging = shallowRef(false)
 const workspace = useTemplateRef<HTMLDivElement>('workspace')
 const questionCount = computed(() => Object.keys(validation.value.request?.questions ?? {}).length)
@@ -59,6 +48,12 @@ const splitStyle = computed(() =>
     ? {}
     : { gridTemplateColumns: `minmax(0, ${split.value}fr) 7px minmax(0, ${100 - split.value}fr)` },
 )
+const availabilityMessage = computed(() => {
+  if (availability.value === 'checking') return '正在检查浏览器支持…'
+  if (availability.value === 'unsupported')
+    return '当前浏览器不支持 Prompt API，请使用支持此功能的桌面版 Chrome。'
+  return '当前设备无法使用本地模型。'
+})
 function resize(event: PointerEvent) {
   if (!dragging.value || !workspace.value || stacked.value) return
   const rect = workspace.value.getBoundingClientRect()
@@ -80,6 +75,12 @@ function shortcut(event: KeyboardEvent) {
     void run()
   }
 }
+function selectHistory(event: Event) {
+  const select = event.target as HTMLSelectElement
+  const item = history.value[Number(select.value)]
+  if (item) loadHistory(item)
+  select.value = ''
+}
 onMounted(() => window.addEventListener('keydown', shortcut))
 onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 function applyImport(value: string) {
@@ -89,143 +90,144 @@ function applyImport(value: string) {
 
 <template>
   <div class="app-shell">
-    <ExampleSidebar
-      :selected-title="title"
-      :history="history"
-      :disabled="busy"
-      @select="selectExample"
-      @history="loadHistory"
-    />
+    <header class="topbar">
+      <h1>BrowserJev</h1>
+      <div v-if="supported" class="toolbar-actions">
+        <select
+          v-if="history.length"
+          class="history-select"
+          aria-label="历史记录"
+          :disabled="busy"
+          value=""
+          @change="selectHistory"
+        >
+          <option disabled value="">历史记录</option>
+          <option v-for="(item, index) in history" :key="item.createdAt" :value="index">
+            {{ new Date(item.createdAt).toLocaleString() }} ·
+            {{ Object.keys(item.request.questions).join(', ') }}
+          </option>
+        </select>
+        <button class="text-button" :disabled="busy" @click="clear">
+          <RotateCcw :size="13" />清空
+        </button>
+        <button class="button compact" @click="inspectOpen = true">
+          <Braces :size="14" />请求 / Schema
+        </button>
+        <div class="segmented layout-switch">
+          <button
+            :aria-pressed="!stacked"
+            title="左右布局"
+            aria-label="左右布局"
+            @click="stacked = false"
+          >
+            <Columns2 :size="14" />
+          </button>
+          <button
+            :aria-pressed="stacked"
+            title="上下布局"
+            aria-label="上下布局"
+            @click="stacked = true"
+          >
+            <Rows2 :size="14" />
+          </button>
+        </div>
+      </div>
+    </header>
     <main class="main">
-      <header class="topbar">
-        <div class="breadcrumb">工作空间<span>/</span><strong>Playground</strong></div>
-        <a href="https://developer.chrome.com/docs/ai/prompt-api" target="_blank" rel="noreferrer"
-          >Prompt API 文档<ArrowUpRight :size="14"
-        /></a>
-      </header>
-      <div class="main-content">
-        <div class="page-heading">
-          <div>
-            <h1>把问题，变成明确的输出。</h1>
-            <p>一个上下文，多种判断。用浏览器内置 AI 探索 Jev 的输入与输出。</p>
-          </div>
-          <span class="privacy-badge"><ShieldCheck :size="14" /> 本机推理</span>
-        </div>
-        <ModelStatus
-          v-model:language="language"
-          :availability="availability"
-          :phase="phase"
-          :progress="progress"
-          :busy="busy"
-          @initialize="initialize"
-          @refresh="checkAvailability"
-          @cancel="cancel"
-        />
-        <div class="workspace-toolbar">
-          <div class="workspace-title">{{ title }}<span class="draft-tag">草稿</span></div>
-          <div class="toolbar-actions">
-            <button class="text-button" :disabled="busy" @click="clear">
-              <RotateCcw :size="13" />清空</button
-            ><button class="button compact inspect-button" @click="inspectOpen = true">
-              <Braces :size="14" />请求 / Schema
+      <div v-if="error" class="error-banner" role="alert">
+        <span>{{ error }}</span>
+        <button class="icon-button" aria-label="关闭错误提示" @click="error = ''">
+          <X :size="14" />
+        </button>
+      </div>
+      <div v-if="!supported" class="unavailable" role="status">
+        <p>{{ availabilityMessage }}</p>
+        <button v-if="availability !== 'checking'" class="button" @click="checkAvailability">
+          重新检测
+        </button>
+      </div>
+      <div v-else ref="workspace" :class="['workspace', { stacked, dragging }]" :style="splitStyle">
+        <div class="request-pane">
+          <RequestEditor
+            v-model:state="stateText"
+            v-model:questions="questionsText"
+            :state-mode="stateMode"
+            :disabled="busy"
+            :validation-error="inputEmpty ? '' : validation.error"
+            :question-count="questionCount"
+            @mode="setStateMode"
+            @add="addQuestion"
+            @format="formatQuestions"
+          />
+          <footer class="run-bar">
+            <label class="language-select"
+              >输入语言
+              <select v-model="language" :disabled="busy">
+                <option value="en">English</option>
+                <option value="ja">日本語</option>
+                <option value="es">Español</option>
+                <option value="de">Deutsch</option>
+                <option value="fr">Français</option>
+              </select>
+            </label>
+            <button v-if="phase === 'running'" class="button primary run-button" @click="cancel">
+              <Square :size="13" />停止运行
             </button>
-            <div class="segmented layout-switch">
-              <button
-                :aria-pressed="!stacked"
-                title="左右布局"
-                aria-label="左右布局"
-                @click="stacked = false"
-              >
-                <Columns2 :size="14" /></button
-              ><button
-                :aria-pressed="stacked"
-                title="上下布局"
-                aria-label="上下布局"
-                @click="stacked = true"
-              >
-                <Rows2 :size="14" />
-              </button>
-            </div>
-          </div>
+            <button
+              v-else
+              class="button primary run-button"
+              :disabled="!canRun"
+              :title="validation.error || 'Ctrl / ⌘ + Enter'"
+              @click="run"
+            >
+              <Play :size="14" fill="currentColor" />运行请求<kbd>Ctrl ↵</kbd>
+            </button>
+          </footer>
         </div>
-        <div v-if="error" class="error-banner" role="alert">
-          <span>{{ error }}</span
-          ><button class="icon-button" aria-label="关闭错误提示" @click="error = ''">
-            <X :size="14" />
-          </button>
+        <div
+          v-if="!stacked"
+          class="resizer"
+          role="separator"
+          aria-label="调整输入和结果面板宽度"
+          aria-orientation="vertical"
+          :aria-valuenow="Math.round(split)"
+          :aria-valuemin="32"
+          :aria-valuemax="68"
+          tabindex="0"
+          @pointerdown="startResize"
+          @pointermove="resize"
+          @pointerup="dragging = false"
+          @pointercancel="dragging = false"
+          @lostpointercapture="dragging = false"
+          @keydown="keyboardResize"
+        >
+          <span />
         </div>
-        <div ref="workspace" :class="['workspace', { stacked, dragging }]" :style="splitStyle">
-          <div class="request-pane">
-            <RequestEditor
-              v-model:state="stateText"
-              v-model:questions="questionsText"
-              :state-mode="stateMode"
-              :disabled="busy"
-              :validation-error="validation.error"
-              :question-count="questionCount"
-              @mode="setStateMode"
-              @add="addQuestion"
-              @format="formatQuestions"
-            />
-          </div>
-          <div
-            v-if="!stacked"
-            class="resizer"
-            role="separator"
-            aria-label="调整输入和结果面板宽度"
-            aria-orientation="vertical"
-            :aria-valuenow="Math.round(split)"
-            :aria-valuemin="32"
-            :aria-valuemax="68"
-            tabindex="0"
-            @pointerdown="startResize"
-            @pointermove="resize"
-            @pointerup="dragging = false"
-            @pointercancel="dragging = false"
-            @lostpointercapture="dragging = false"
-            @keydown="keyboardResize"
-          >
-            <span />
-          </div>
-          <div class="response-pane">
-            <ResponsePanel
-              :evaluation="evaluation"
-              :request="validation.request"
-              :running="phase === 'running'"
-              :stale="stale"
-              @notice="notice = $event"
-            />
-          </div>
-        </div>
-        <footer class="run-bar">
-          <div class="run-summary">
-            <span class="tiny-mark"><CheckCheck :size="15" /></span
-            ><strong>{{ questionCount }} 个问题</strong><span>本地运行，无 API 费用</span>
-          </div>
-          <button v-if="phase === 'running'" class="button primary run-button" @click="cancel">
-            <Square :size="13" />停止运行</button
-          ><button
+        <div class="response-pane">
+          <ExamplesPanel v-if="inputEmpty" :disabled="busy" @select="selectExample" />
+          <ResponsePanel
             v-else
-            class="button primary run-button"
-            :disabled="!canRun"
-            :title="phase !== 'ready' ? '请先启用本地模型' : validation.error || 'Ctrl / ⌘ + Enter'"
-            @click="run"
-          >
-            <Play :size="14" fill="currentColor" />运行请求<kbd>Ctrl ↵</kbd>
-          </button>
-        </footer>
-        <div class="workspace-foot">
-          <span><span class="status-dot" />草稿与最近 10 次结果仅保存在此浏览器</span
-          ><span>Jev 格式兼容 · Chrome 本地模型</span>
+            :evaluation="evaluation"
+            :request="validation.request"
+            :running="phase === 'running'"
+            :stale="stale"
+            @notice="notice = $event"
+          />
         </div>
       </div>
     </main>
     <div v-if="notice" class="toast" role="status">
-      <CheckCheck :size="15" /><span>{{ notice }}</span
+      <span>{{ notice }}</span
       ><button class="icon-button" aria-label="关闭通知" @click="notice = ''">
         <X :size="13" />
       </button>
     </div>
+    <ModelDownloadDialog
+      :open="phase === 'initializing'"
+      :progress="progress"
+      :downloading="availability !== 'available'"
+      @cancel="cancel"
+    />
     <InspectorDialog
       v-model="inspectOpen"
       :request="validation.request"
@@ -239,114 +241,55 @@ function applyImport(value: string) {
 <style scoped>
 .app-shell {
   display: flex;
-  min-height: 100dvh;
-  height: 100dvh;
-  overflow: hidden;
-}
-.main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
   flex-direction: column;
-  overflow: auto;
+  height: 100dvh;
+  min-height: 620px;
 }
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 30px;
+  gap: 16px;
+  padding: 14px 22px;
   background: #fff;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-.breadcrumb {
-  display: flex;
-  gap: 13px;
-  font-size: 11px;
-  color: #9aa4b4;
-}
-.breadcrumb strong {
-  color: #5d6a81;
-  font-weight: 500;
-}
-.topbar a {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
-  color: #718097;
-  text-decoration: none;
-}
-.main-content {
-  padding: 27px 30px 14px;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 700px;
-}
-.page-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 25px;
-}
-.page-heading h1 {
-  font-size: 23px;
-  letter-spacing: -0.7px;
-  font-weight: 600;
-  margin: 0 0 9px;
-}
-.page-heading p {
+.topbar h1 {
   margin: 0;
-  color: #8c97aa;
-  font-size: 11px;
-  line-height: 1.8;
-}
-.privacy-badge {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  color: #73839a;
-  white-space: nowrap;
-}
-.workspace-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 22px 0 13px;
-}
-.workspace-title {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 600;
-}
-.draft-tag {
-  font-size: 9px;
-  color: #9ca5b5;
-  font-weight: 400;
+  letter-spacing: -0.4px;
 }
 .toolbar-actions {
   display: flex;
   align-items: center;
   gap: 14px;
 }
-.layout-switch {
-  padding: 2px;
+.history-select {
+  max-width: 120px;
+  border: 0;
+  background: transparent;
+  color: #63718a;
+  font-size: 11px;
 }
 .layout-switch button {
   padding: 5px 7px;
 }
+.main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 18px;
+  overflow: auto;
+}
 .workspace {
   flex: 1;
-  min-height: 350px;
+  min-height: 490px;
   display: grid;
   border: 1px solid var(--border);
-  border-radius: 9px 9px 0 0;
+  border-radius: 8px;
   overflow: hidden;
   background: #fff;
 }
@@ -354,6 +297,14 @@ function applyImport(value: string) {
 .response-pane {
   min-width: 0;
   min-height: 0;
+}
+.request-pane {
+  display: flex;
+  flex-direction: column;
+}
+.request-pane :deep(.request-editor) {
+  flex: 1;
+  height: auto;
 }
 .resizer {
   display: flex;
@@ -380,67 +331,45 @@ function applyImport(value: string) {
 }
 .run-bar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 15px;
-  padding: 12px 17px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-top: 0;
-  border-radius: 0 0 9px 9px;
+  gap: 10px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
-.run-summary {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 10px;
-  color: #9aa4b4;
-}
-.run-summary strong {
+.language-select {
   color: #6d7990;
   font-size: 10px;
-  font-weight: 500;
-}
-.tiny-mark {
-  display: inline-flex;
-  color: #9baac4;
-}
-.run-button {
-  padding: 10px 17px;
-  min-width: 145px;
-  justify-content: center;
-}
-.run-button kbd {
-  font: inherit;
-  font-size: 9px;
-  margin-left: 9px;
-  padding-left: 10px;
-  border-left: 1px solid #ffffff40;
-  opacity: 0.7;
-}
-.workspace-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 12px;
-  font-size: 9px;
-  color: #a3adbd;
-  gap: 16px;
-}
-.workspace-foot > span:first-child {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.workspace-foot .status-dot {
-  width: 4px;
-  height: 4px;
+.language-select select {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  min-width: 0;
+  font-size: 11px;
+}
+.run-button {
+  justify-content: center;
+  padding: 10px 14px;
+}
+.run-button kbd {
+  font: inherit;
+  font-size: 9px;
+  margin-left: 5px;
+  padding-left: 9px;
+  border-left: 1px solid #ffffff40;
+  opacity: 0.7;
 }
 .error-banner {
   display: flex;
   align-items: center;
-  gap: 10px;
   justify-content: space-between;
+  gap: 10px;
   color: #a94339;
   background: #fff1ed;
   border: 1px solid #f3d5ca;
@@ -452,6 +381,18 @@ function applyImport(value: string) {
 }
 .error-banner span {
   overflow-wrap: anywhere;
+}
+.unavailable {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  color: #63718a;
+  font-size: 13px;
+  line-height: 1.8;
 }
 .toast {
   position: fixed;
@@ -477,117 +418,52 @@ function applyImport(value: string) {
 .stacked {
   display: flex;
   flex-direction: column;
-  overflow: visible;
   flex: none;
-  min-height: 1000px;
+  overflow: visible;
 }
 .stacked .request-pane {
   height: 620px;
-  flex: none;
   border-bottom: 1px solid var(--border);
 }
 .stacked .response-pane {
-  min-height: 400px;
+  height: 540px;
 }
-@media (min-width: 1700px) {
-  .main-content {
-    padding: 34px 40px 18px;
+@media (max-width: 700px) {
+  .app-shell {
+    height: auto;
+    min-height: 100dvh;
   }
   .topbar {
-    padding-inline: 40px;
-  }
-  .page-heading {
-    margin-bottom: 30px;
-  }
-  .page-heading h1 {
-    font-size: 26px;
-  }
-}
-@media (max-width: 1200px) {
-  .main-content {
-    padding-inline: 19px;
-  }
-  .topbar {
-    padding-inline: 19px;
-  }
-  .run-summary > span:last-child {
-    display: none;
+    flex-wrap: wrap;
+    padding: 14px 16px;
   }
   .toolbar-actions {
-    gap: 8px;
+    gap: 10px;
+    flex-wrap: wrap;
   }
-  .privacy-badge {
-    display: none;
+  .main {
+    overflow: visible;
+    min-height: calc(100dvh - 100px);
+    padding: 12px;
   }
-}
-@media (max-width: 1000px) {
   .workspace {
-    grid-template-columns: 1fr !important;
     display: flex;
     flex-direction: column;
     flex: none;
-    overflow: visible;
   }
   .resizer,
   .layout-switch {
     display: none;
   }
   .request-pane {
-    height: 600px;
+    height: 620px;
     border-bottom: 1px solid var(--border);
   }
   .response-pane {
-    min-height: 430px;
+    height: 540px;
   }
-  .main-content {
-    min-height: auto;
-  }
-  .workspace-foot > span:last-child {
+  .run-button kbd {
     display: none;
-  }
-}
-@media (max-width: 800px) {
-  .app-shell {
-    height: auto;
-    display: block;
-    overflow: visible;
-  }
-  .main {
-    overflow: visible;
-  }
-  .topbar {
-    display: none;
-  }
-  .main-content {
-    padding: 25px 16px 18px;
-  }
-  .page-heading h1 {
-    font-size: 21px;
-  }
-  .page-heading p {
-    font-size: 10px;
-  }
-  .workspace-toolbar {
-    gap: 8px;
-  }
-  .workspace-title {
-    font-size: 11px;
-  }
-  .draft-tag {
-    display: none;
-  }
-  .inspect-button {
-    font-size: 10px;
-  }
-  .run-bar {
-    position: sticky;
-    bottom: 0;
-    z-index: 5;
-    box-shadow: 0 -3px 15px #1d355108;
-  }
-  .toast {
-    bottom: 80px;
-    width: max-content;
   }
 }
 </style>
