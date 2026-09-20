@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { HugeiconsIcon } from '@hugeicons/vue'
 import {
   Layout2ColumnIcon,
   Layout2RowIcon,
   Delete01Icon,
   PlayIcon,
   StopIcon,
+  GithubIcon,
 } from '@hugeicons/core-free-icons'
 import { usePlayground } from '../../composables/usePlayground'
 import AppButton from '../ui/AppButton.vue'
@@ -106,6 +108,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
           icon-only
         />
         <LocaleSelect />
+        <a
+          class="github-link"
+          href="https://github.com/daidr/browser-jev"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="GitHub · daidr/browser-jev"
+          title="GitHub · daidr/browser-jev"
+        >
+          <HugeiconsIcon :icon="GithubIcon" :size="22" aria-hidden="true" />
+        </a>
       </div>
     </header>
     <main class="main">
@@ -170,6 +182,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
         </template>
       </SplitWorkspace>
     </main>
+    <footer class="attribution">
+      by <a href="https://github.com/daidr" target="_blank" rel="noopener noreferrer">daidr</a>
+    </footer>
     <StatusMessage v-if="notice" class="toast" dismissible @dismiss="notice = ''">{{
       noticeText
     }}</StatusMessage>
@@ -214,6 +229,34 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 }
 .history-select {
   width: 160px;
+}
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  color: var(--muted);
+}
+.github-link:hover {
+  color: var(--ink);
+  background: var(--surface-hover);
+}
+.attribution {
+  flex-shrink: 0;
+  padding: 0 16px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+.attribution a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+.attribution a:hover {
+  color: var(--blue);
 }
 .main {
   display: flex;
@@ -274,7 +317,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   }
   .main {
     overflow: visible;
-    min-height: calc(100dvh - 100px);
     padding: 12px;
   }
   .layout-switch {
