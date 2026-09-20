@@ -4,6 +4,7 @@ import { usePlayground } from '../src/composables/usePlayground'
 import { examples, getExamples, questionTemplate } from '../src/lib/examples'
 import { createAppI18n, readLocale } from '../src/i18n'
 import type { Availability, ModelFactory, ModelSession, PromptOptions } from '../src/lib/prompt-api'
+import type { UserActivationSource } from '../src/lib/user-activation'
 
 // Mount only the composable so Vue runs its real lifecycle without a browser or DOM shim.
 const renderer = createRenderer<object, object>({
@@ -45,7 +46,7 @@ class Session extends EventTarget implements ModelSession {
 }
 
 function model(availability: Availability = 'downloadable') {
-  const monitor = new EventTarget()
+  const monitors: EventTarget[] = []
   const bases: Session[] = []
   const createSignals: AbortSignal[] = []
   const downloads: ReturnType<typeof Promise.withResolvers<ModelSession>>[] = []
@@ -53,6 +54,8 @@ function model(availability: Availability = 'downloadable') {
   const factory: ModelFactory = {
     availability: async () => availability,
     create(options) {
+      const monitor = new EventTarget()
+      monitors.push(monitor)
       options.monitor?.(monitor)
       const base = new Session()
       bases.push(base)
@@ -72,16 +75,43 @@ function model(availability: Availability = 'downloadable') {
     ready() {
       pending = false
     },
-    progress(value: number) {
-      monitor.dispatchEvent(Object.assign(new Event('downloadprogress'), { loaded: value }))
+    progress(value: number, index = monitors.length - 1) {
+      monitors[index]!.dispatchEvent(
+        Object.assign(new Event('downloadprogress'), { loaded: value }),
+      )
     },
-    finish() {
-      downloads.at(-1)!.resolve(bases.at(-1)!)
+    finish(index = downloads.length - 1) {
+      downloads[index]!.resolve(bases[index]!)
     },
   }
 }
 
-async function mount(factory?: ModelFactory, secure = true, stored = new Map<string, string>()) {
+function activationSource(active = false) {
+  const listeners = new Set<() => void>()
+  return {
+    hasBeenActive: () => active,
+    subscribe(callback: () => void) {
+      listeners.add(callback)
+      return () => {
+        listeners.delete(callback)
+      }
+    },
+    activate() {
+      active = true
+      for (const listener of [...listeners]) listener()
+    },
+    listeners,
+  } satisfies UserActivationSource & { activate: () => void; listeners: Set<() => void> }
+}
+
+const flushPromises = () => new Promise<void>((resolve) => setImmediate(resolve))
+
+async function mount(
+  factory?: ModelFactory,
+  secure = true,
+  stored = new Map<string, string>(),
+  activation = activationSource(),
+) {
   let playground!: ReturnType<typeof usePlayground>
   const i18n = createAppI18n(readLocale({ getItem: (key) => stored.get(key) ?? null }))
   const app = renderer.createApp({
@@ -89,6 +119,7 @@ async function mount(factory?: ModelFactory, secure = true, stored = new Map<str
       playground = usePlayground({
         getFactory: () => factory,
         isSecureContext: () => secure,
+        userActivation: activation,
         storage: {
           getItem: (key) => stored.get(key) ?? null,
           setItem: (key, value) => {
@@ -103,8 +134,167 @@ async function mount(factory?: ModelFactory, secure = true, stored = new Map<str
   app.mount({})
   cleanup.push(() => app.unmount())
   await nextTick()
-  return { playground, stored, app, i18n }
+  return { playground, stored, app, i18n, activation }
 }
+
+test('page entry warms an available model without a run, modal, or history entry', async () => {
+  const m = model('available')
+  const { playground: p, activation, stored } = await mount(m.factory)
+  expect(m.bases).toHaveLength(1)
+  expect(activation.hasBeenActive()).toBe(false)
+  expect(activation.listeners.size).toBe(0)
+  expect(p.phase.value).toBe('idle')
+  expect(p.busy.value).toBe(false)
+  p.addQuestion('noul')
+  expect(p.canRun.value).toBe(true)
+  m.finish()
+  await flushPromises()
+  expect(p.phase.value).toBe('ready')
+  expect(m.bases[0]!.children).toHaveLength(0)
+  expect(p.evaluation.value).toBeNull()
+  expect(stored.has('browserjev.history.v1')).toBe(false)
+  const running = p.run()
+  expect(p.phase.value).toBe('running')
+  await running
+  expect(m.bases).toHaveLength(1)
+  expect(p.history.value).toHaveLength(1)
+})
+
+test('first interaction downloads silently; Run joins preparation at its current progress', async () => {
+  const m = model()
+  const { playground: p, activation } = await mount(m.factory)
+  expect(m.bases).toHaveLength(0)
+  expect(activation.listeners.size).toBe(1)
+  activation.activate()
+  expect(m.bases).toHaveLength(1)
+  expect(activation.listeners.size).toBe(0)
+  m.progress(0.42)
+  expect(p.phase.value).toBe('idle')
+  expect(p.progress.value).toBe(0.42)
+  expect(p.busy.value).toBe(false)
+  p.addQuestion('noul')
+  p.stateText.value = 'Edited while downloading.'
+  expect(p.canRun.value).toBe(true)
+  const running = p.run()
+  expect(p.phase.value).toBe('initializing')
+  expect(p.progress.value).toBe(0.42)
+  await p.run()
+  expect(m.bases).toHaveLength(1)
+  m.progress(1)
+  expect(p.phase.value).toBe('initializing')
+  m.finish()
+  await running
+  expect(p.phase.value).toBe('ready')
+  expect(m.bases[0]!.children).toHaveLength(1)
+  expect(p.evaluation.value?.request.state).toBe('Edited while downloading.')
+})
+
+test('an existing download or prior activation prepares immediately in the background', async () => {
+  for (const [status, active] of [
+    ['downloading', false],
+    ['downloadable', true],
+  ] as const) {
+    const m = model(status)
+    const { playground: p, activation } = await mount(
+      m.factory,
+      true,
+      new Map(),
+      activationSource(active),
+    )
+    expect(m.bases).toHaveLength(1)
+    expect(activation.listeners.size).toBe(0)
+    m.progress(0.65)
+    expect(p.phase.value).toBe('idle')
+    expect(p.progress.value).toBe(0.65)
+    m.finish()
+    await flushPromises()
+    expect(p.phase.value).toBe('ready')
+    expect(p.evaluation.value).toBeNull()
+  }
+})
+
+test('a background failure stays silent and Run retries in the click call stack', async () => {
+  const m = model('available')
+  const { playground: p } = await mount(m.factory)
+  m.downloads[0]!.reject(new Error('Background initialization failed'))
+  await flushPromises()
+  expect(p.phase.value).toBe('idle')
+  expect(p.error.value).toBe('')
+  expect(p.notice.value).toBe('')
+  p.addQuestion('noul')
+  const running = p.run()
+  expect(m.bases).toHaveLength(2)
+  m.finish()
+  await running
+  expect(p.phase.value).toBe('ready')
+})
+
+test('NotAllowed during warmup waits for real activation without displaying an error', async () => {
+  const m = model('available')
+  const create = m.factory.create
+  let attempts = 0
+  m.factory.create = (options) =>
+    ++attempts === 1
+      ? Promise.reject(new DOMException('User activation required', 'NotAllowedError'))
+      : create(options)
+  const { playground: p, activation } = await mount(m.factory)
+  await flushPromises()
+  expect(attempts).toBe(1)
+  expect(p.error.value).toBe('')
+  expect(p.phase.value).toBe('idle')
+  expect(activation.listeners.size).toBe(1)
+  activation.activate()
+  expect(attempts).toBe(2)
+  expect(p.phase.value).toBe('idle')
+  m.finish()
+  await flushPromises()
+  expect(p.phase.value).toBe('ready')
+})
+
+test('cancelled preparation cannot block or overwrite a new run if it completes late', async () => {
+  const m = model('downloading')
+  const { playground: p } = await mount(m.factory)
+  p.addQuestion('noul')
+  m.progress(0.3)
+  const first = p.run()
+  p.cancel()
+  await first // Must close even when create() has not settled yet.
+  expect(p.phase.value).toBe('idle')
+  expect(m.createSignals[0]!.aborted).toBe(true)
+  const second = p.run()
+  expect(m.bases).toHaveLength(2)
+  m.progress(0.5, 1)
+  m.progress(0.9, 0)
+  m.finish(0)
+  await flushPromises()
+  expect(p.phase.value).toBe('initializing')
+  expect(p.progress.value).toBe(0.5)
+  expect(m.bases[0]!.destroyed).toBe(true)
+  expect(m.bases[1]!.destroyed).toBe(false)
+  expect(p.evaluation.value).toBeNull()
+  m.finish(1)
+  await second
+  expect(p.history.value).toHaveLength(1)
+})
+
+test('unmount cancels background preparation and removes deferred activation listeners', async () => {
+  const m = model('available')
+  const { playground: p, app } = await mount(m.factory)
+  app.unmount()
+  expect(m.createSignals[0]!.aborted).toBe(true)
+  m.finish()
+  await flushPromises()
+  expect(m.bases[0]!.destroyed).toBe(true)
+  expect(p.phase.value).toBe('idle')
+  expect(p.history.value).toHaveLength(0)
+  const waiting = model()
+  const deferred = await mount(waiting.factory)
+  expect(deferred.activation.listeners.size).toBe(1)
+  deferred.app.unmount()
+  expect(deferred.activation.listeners.size).toBe(0)
+  deferred.activation.activate()
+  expect(waiting.bases).toHaveLength(0)
+})
 
 test('switching interface locale preserves edited input, persisted draft, and completed result', async () => {
   const m = model('available')

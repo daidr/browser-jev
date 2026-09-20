@@ -12,6 +12,7 @@ import {
 } from '../lib/contract'
 import { restoreHistory } from '../lib/history'
 import { questionTemplate, type Example } from '../lib/examples'
+import { browserUserActivation, type UserActivationSource } from '../lib/user-activation'
 import {
   getModelFactory,
   PromptEngine,
@@ -26,12 +27,14 @@ interface Environment {
   getFactory: () => ModelFactory | undefined
   isSecureContext: () => boolean
   storage: Pick<Storage, 'getItem' | 'setItem'>
+  userActivation: UserActivationSource
 }
 
 export function usePlayground(environment: Partial<Environment> = {}) {
   const { t, locale } = useI18n()
   const getFactory = environment.getFactory ?? getModelFactory
   const isSecureContext = environment.isSecureContext ?? (() => window.isSecureContext)
+  const userActivation = environment.userActivation ?? browserUserActivation
   const storage = environment.storage ?? {
     getItem: (key: string) => localStorage.getItem(key),
     setItem: (key: string, value: string) => localStorage.setItem(key, value),
@@ -42,7 +45,17 @@ export function usePlayground(environment: Partial<Environment> = {}) {
   const questionsText = shallowRef('{}')
   const requestedModel = shallowRef('jev-latest')
   const availability = shallowRef<Availability | 'unsupported' | 'checking'>('checking')
-  const phase = shallowRef<'idle' | 'initializing' | 'ready' | 'running'>('idle')
+  const activity = shallowRef<'idle' | 'waiting' | 'running'>('idle')
+  const modelReady = shallowRef(false)
+  const phase = computed(() =>
+    activity.value === 'waiting'
+      ? 'initializing'
+      : activity.value === 'running'
+        ? 'running'
+        : modelReady.value
+          ? 'ready'
+          : 'idle',
+  )
   const progress = shallowRef<number | null>(null)
   const errorSource = shallowRef<unknown>('')
   const error = computed({
@@ -57,9 +70,11 @@ export function usePlayground(environment: Partial<Environment> = {}) {
   const history = shallowRef<Evaluation[]>([])
   let engine: PromptEngine | undefined
   let controller: AbortController | undefined
+  let preparation: { controller: AbortController; promise: Promise<void> } | undefined
+  let stopWaitingForActivation: (() => void) | undefined
   let capabilityVersion = 0
   let disposed = false
-  const busy = computed(() => phase.value === 'initializing' || phase.value === 'running')
+  const busy = computed(() => activity.value !== 'idle')
   const supported = computed(() =>
     ['available', 'downloadable', 'downloading'].includes(availability.value),
   )
@@ -109,6 +124,62 @@ export function usePlayground(environment: Partial<Environment> = {}) {
   )
   const canRun = computed(() => !!validation.value.request && !busy.value && supported.value)
 
+  function stopActivationListener() {
+    stopWaitingForActivation?.()
+    stopWaitingForActivation = undefined
+  }
+  function waitForActivation() {
+    if (!disposed && !stopWaitingForActivation)
+      stopWaitingForActivation = userActivation.subscribe(warmup)
+  }
+  function prepare(): Promise<void> {
+    if (modelReady.value) return Promise.resolve()
+    if (preparation && !preparation.controller.signal.aborted) return preparation.promise
+    const factory = getFactory()
+    if (!factory) return Promise.reject(new AppError('notSupported'))
+    stopActivationListener()
+    engine ??= new PromptEngine(factory)
+    progress.value = null
+    const operation = { controller: new AbortController(), promise: Promise.resolve() }
+    const signal = operation.controller.signal
+    preparation = operation
+    // create() is invoked synchronously, including when called by a real user gesture.
+    operation.promise = engine
+      .initialize(signal, (value) => {
+        if (!signal.aborted && !disposed && preparation === operation) progress.value = value
+      })
+      .then(() => {
+        signal.throwIfAborted()
+        if (disposed) return
+        modelReady.value = true
+        availability.value = 'available'
+      })
+      .finally(() => {
+        if (preparation === operation) preparation = undefined
+      })
+    return operation.promise
+  }
+  function warmup() {
+    if (disposed || !supported.value || modelReady.value || preparation || busy.value) return
+    if (availability.value === 'downloadable' && !userActivation.hasBeenActive()) {
+      waitForActivation()
+      return
+    }
+    // Background preparation must not block editing, open the modal, or surface an error.
+    void prepare().catch((error: unknown) => {
+      if (!disposed && !busy.value && error instanceof Error && error.name === 'NotAllowedError')
+        waitForActivation()
+    })
+  }
+  function waitForPreparation(signal: AbortSignal) {
+    signal.throwIfAborted()
+    let onAbort: () => void
+    return new Promise<void>((resolve, reject) => {
+      onAbort = () => reject(signal.reason)
+      signal.addEventListener('abort', onAbort, { once: true })
+      prepare().then(resolve, reject)
+    }).finally(() => signal.removeEventListener('abort', onAbort))
+  }
   async function checkAvailability() {
     if (busy.value || disposed) return
     const version = ++capabilityVersion
@@ -121,7 +192,10 @@ export function usePlayground(environment: Partial<Environment> = {}) {
     availability.value = 'checking'
     try {
       const value = await factory.availability()
-      if (version === capabilityVersion && !disposed) availability.value = value
+      if (version === capabilityVersion && !disposed) {
+        availability.value = value
+        warmup()
+      }
     } catch (e) {
       if (version === capabilityVersion && !disposed) {
         availability.value = 'unavailable'
@@ -137,29 +211,20 @@ export function usePlayground(environment: Partial<Environment> = {}) {
       return
     }
     const request = structuredClone(validation.value.request)
-    let ready = phase.value === 'ready'
-    engine ??= new PromptEngine(factory)
+    const runController = new AbortController()
+    const signal = runController.signal
+    controller = runController
     error.value = ''
     notice.value = ''
     try {
-      if (!ready) {
-        progress.value = null
-        phase.value = 'initializing'
-        controller = new AbortController()
-        const signal = controller.signal
-        // Keep create() on the click's call stack to preserve user activation.
-        await engine.initialize(signal, (value) => {
-          if (!signal.aborted && !disposed) progress.value = value
-        })
-        signal.throwIfAborted()
-        if (disposed) return
-        ready = true
-        availability.value = 'available'
+      if (!modelReady.value) {
+        activity.value = 'waiting'
+        await waitForPreparation(signal)
       }
-      // Cancelling inference must not abort the reusable base session's create signal.
-      controller = new AbortController()
-      phase.value = 'running'
-      const result = await engine.evaluate(request, controller.signal)
+      signal.throwIfAborted()
+      if (disposed) return
+      activity.value = 'running'
+      const result = await engine!.evaluate(request, signal)
       if (disposed) return
       evaluation.value = result
       history.value = [result, ...history.value].slice(0, 10)
@@ -170,16 +235,19 @@ export function usePlayground(environment: Partial<Environment> = {}) {
       }
     } catch (e) {
       if (!disposed) {
-        if (controller?.signal.aborted) notice.value = 'cancelled'
+        if (signal.aborted) notice.value = 'cancelled'
         else errorSource.value = e
       }
     } finally {
-      if (!disposed) phase.value = ready ? 'ready' : 'idle'
-      controller = undefined
+      if (controller === runController) {
+        if (!disposed) activity.value = 'idle'
+        controller = undefined
+      }
     }
   }
   function cancel() {
     controller?.abort()
+    if (activity.value === 'waiting' && !modelReady.value) preparation?.controller.abort()
   }
   function applyRequest(request: JevRequest, name = t('request.custom')) {
     if (busy.value) return
@@ -292,6 +360,8 @@ export function usePlayground(environment: Partial<Environment> = {}) {
   })
   onBeforeUnmount(() => {
     disposed = true
+    stopActivationListener()
+    preparation?.controller.abort()
     controller?.abort()
     engine?.destroy()
   })
