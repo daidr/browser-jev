@@ -2,7 +2,7 @@
 import { computed, shallowRef, useId } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { HugeiconsIcon } from '@hugeicons/vue'
-import { ArrowDown01Icon } from '@hugeicons/core-free-icons'
+import ArrowDown01Icon from '@hugeicons/core-free-icons/ArrowDown01Icon'
 import { describe, type Answer, type Question } from '../../lib/contract'
 import ProbabilityDistribution from './ProbabilityDistribution.vue'
 const props = defineProps<{ id: string; question: Question; answer: Answer }>()

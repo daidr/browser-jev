@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Cancel01Icon } from '@hugeicons/core-free-icons'
+import Cancel01Icon from '@hugeicons/core-free-icons/Cancel01Icon'
 import AppButton from './AppButton.vue'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()

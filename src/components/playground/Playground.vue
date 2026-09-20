@@ -2,14 +2,12 @@
 import { computed, onBeforeUnmount, onMounted, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { HugeiconsIcon } from '@hugeicons/vue'
-import {
-  Layout2ColumnIcon,
-  Layout2RowIcon,
-  Delete01Icon,
-  PlayIcon,
-  StopIcon,
-  GithubIcon,
-} from '@hugeicons/core-free-icons'
+import Layout2ColumnIcon from '@hugeicons/core-free-icons/Layout2ColumnIcon'
+import Layout2RowIcon from '@hugeicons/core-free-icons/Layout2RowIcon'
+import Delete01Icon from '@hugeicons/core-free-icons/Delete01Icon'
+import PlayIcon from '@hugeicons/core-free-icons/PlayIcon'
+import StopIcon from '@hugeicons/core-free-icons/StopIcon'
+import GithubIcon from '@hugeicons/core-free-icons/GithubIcon'
 import { usePlayground } from '../../composables/usePlayground'
 import AppButton from '../ui/AppButton.vue'
 import SegmentedControl from '../ui/SegmentedControl.vue'

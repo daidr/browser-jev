@@ -28,7 +28,9 @@ import {
   completionKeymap,
 } from '@codemirror/autocomplete'
 import { lintKeymap } from '@codemirror/lint'
-import { ArrowDown01Icon, ArrowRight01Icon, MoreHorizontalIcon } from '@hugeicons/core-free-icons'
+import ArrowDown01Icon from '@hugeicons/core-free-icons/ArrowDown01Icon'
+import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon'
+import MoreHorizontalIcon from '@hugeicons/core-free-icons/MoreHorizontalIcon'
 
 // CodeMirror's DOM hooks own these nodes, so render Hugeicons data directly without mounting Vue instances.
 function foldButton(icon: typeof ArrowDown01Icon, label: string): HTMLButtonElement {

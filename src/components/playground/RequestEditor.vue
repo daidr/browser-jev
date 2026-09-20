@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { TextWrapIcon } from '@hugeicons/core-free-icons'
+import TextWrapIcon from '@hugeicons/core-free-icons/TextWrapIcon'
 import { computed, defineAsyncComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Question } from '../../lib/contract'

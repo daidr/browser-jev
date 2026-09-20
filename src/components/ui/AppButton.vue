@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { HugeiconsIcon } from '@hugeicons/vue'
-import type { Add01Icon } from '@hugeicons/core-free-icons'
+import type Add01Icon from '@hugeicons/core-free-icons/Add01Icon'
 withDefaults(
   defineProps<{
     label: string

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { HugeiconsIcon } from '@hugeicons/vue'
-import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
+import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getExamples, type Example } from '../../lib/examples'

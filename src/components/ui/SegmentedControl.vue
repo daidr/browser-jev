@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="T extends string">
 import { HugeiconsIcon } from '@hugeicons/vue'
-import type { Add01Icon } from '@hugeicons/core-free-icons'
+import type Add01Icon from '@hugeicons/core-free-icons/Add01Icon'
 const model = defineModel<T>({ required: true })
 defineProps<{
   label: string
