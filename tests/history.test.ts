@@ -11,7 +11,7 @@ const raw = '{"q0":{"noul":0.9}}'
 const record = {
   request,
   raw,
-  response: decodeResponse(request, raw, { input_tokens: 100 }),
+  response: decodeResponse(request, raw, { input_tokens: 100 }, 'nested'),
   elapsedMs: 120,
   createdAt: '2026-09-21T12:00:00Z',
   contextUsage: 117,

@@ -23,17 +23,21 @@ export function restoreHistory(value: unknown): Evaluation[] {
       const savedResponse = isRecord(item.response) ? item.response : {}
       const savedUsage = isRecord(savedResponse.usage) ? savedResponse.usage : {}
       const inputTokens = count(savedUsage.input_tokens)
+      const format = item.responseFormat ?? 'nested'
+      if (format !== 'compact' && format !== 'nested') return []
       // Recompute answers from validated raw output, while retaining recorded input usage.
       const response = decodeResponse(
         request,
         item.raw,
         inputTokens === undefined ? {} : { input_tokens: inputTokens },
+        format,
       )
       return [
         {
           request,
           response,
           raw: item.raw,
+          ...(item.responseFormat === undefined ? {} : { responseFormat: format }),
           elapsedMs: item.elapsedMs,
           createdAt: item.createdAt,
           contextUsage: count(item.contextUsage),

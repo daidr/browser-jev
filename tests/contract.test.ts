@@ -92,9 +92,9 @@ describe('Jev request compatibility', () => {
 
 describe('answer invariants', () => {
   const raw = {
-    q0: { probabilities: { billing: 0.8, technical: 0.1, account: 0.1 } },
-    q1: { noul: 0.95 },
-    q2: { probabilities: { '0': 0.1, '1': 0.6, '2': 0.3 } },
+    q0: { billing: 0.8, technical: 0.1, account: 0.1 },
+    q1: 0.95,
+    q2: { '0': 0.1, '1': 0.6, '2': 0.3 },
   }
   test('computes choice and weighted score from complete distributions', () => {
     const output = decodeResponse(request, JSON.stringify(raw), { input_tokens: 521 })
@@ -114,7 +114,7 @@ describe('answer invariants', () => {
       request,
       JSON.stringify({
         ...raw,
-        q0: { probabilities: { billing: 0.7, technical: 0.7, account: 0.7 } },
+        q0: { billing: 0.7, technical: 0.7, account: 0.7 },
       }),
     )
     const choice = output.answers.department
@@ -127,12 +127,12 @@ describe('answer invariants', () => {
   })
   test('rejects incomplete, nonfinite, negative, zero-mass and extra output', () => {
     const invalid = [
-      { ...raw, q0: { probabilities: { billing: 1, technical: 0 } } },
-      { ...raw, q0: { probabilities: { billing: 0, technical: 0, account: 0 } } },
-      { ...raw, q1: { noul: -0.1 } },
-      { ...raw, q1: { noul: 1.1 } },
-      { ...raw, q1: { noul: null } },
-      { ...raw, q3: { noul: 1 } },
+      { ...raw, q0: { billing: 1, technical: 0 } },
+      { ...raw, q0: { billing: 0, technical: 0, account: 0 } },
+      { ...raw, q1: -0.1 },
+      { ...raw, q1: 1.1 },
+      { ...raw, q1: null },
+      { ...raw, q3: 1 },
       { ...raw, q1: { noul: 1, confidence: 1 } },
     ]
     for (const value of invalid)
@@ -146,10 +146,7 @@ describe('answer invariants', () => {
         '{"model":"jev-latest","state":"x","questions":{"__proto__":{"type":"choice","instructions":"Pick","criteria":{"constructor":null,"__proto__":null}}}}',
       ),
     )
-    const response = decodeResponse(
-      special,
-      '{"q0":{"probabilities":{"constructor":0.2,"__proto__":0.8}}}',
-    )
+    const response = decodeResponse(special, '{"q0":{"constructor":0.2,"__proto__":0.8}}')
     expect(Object.hasOwn(response.answers, '__proto__')).toBe(true)
     expect(JSON.parse(JSON.stringify(response)).answers.__proto__.choice).toBe('__proto__')
     expect(({} as Record<string, unknown>).polluted).toBeUndefined()
@@ -162,8 +159,9 @@ describe('answer invariants', () => {
         rating: { type: 'score', instructions: ['Rate'], criteria: [{ label: 'low' }, ['high']] },
       },
     }
-    expect(
-      decodeResponse(structured, '{"q0":{"probabilities":{"0":0.25,"1":0.75}}}').answers.rating,
-    ).toMatchObject({ score: 0.75, legend: { '0': { label: 'low' }, '1': ['high'] } })
+    expect(decodeResponse(structured, '{"q0":{"0":0.25,"1":0.75}}').answers.rating).toMatchObject({
+      score: 0.75,
+      legend: { '0': { label: 'low' }, '1': ['high'] },
+    })
   })
 })

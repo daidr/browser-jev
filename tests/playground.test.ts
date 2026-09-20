@@ -27,7 +27,7 @@ class Session extends EventTarget implements ModelSession {
   destroyed = false
   children: Session[] = []
   calls = 0
-  respond: (options: PromptOptions) => Promise<string> = async () => '{"q0":{"noul":0.8}}'
+  respond: (options: PromptOptions) => Promise<string> = async () => '{"q0":0.8}'
   async clone() {
     if (this.destroyed) throw new Error('Base session destroyed')
     const child = new Session()
@@ -384,7 +384,7 @@ test('cancelling inference leaves the base session reusable after initialization
   const running = p.run()
   m.bases[0]!.respond = async () => {
     p.cancel()
-    return '{"q0":{"noul":1}}'
+    return '{"q0":1}'
   }
   m.finish()
   await running
@@ -393,7 +393,7 @@ test('cancelling inference leaves the base session reusable after initialization
   expect(m.createSignals[0]!.aborted).toBe(false)
   expect(m.bases[0]!.destroyed).toBe(false)
   expect(m.bases[0]!.children[0]!.destroyed).toBe(true)
-  m.bases[0]!.respond = async () => '{"q0":{"noul":0.5}}'
+  m.bases[0]!.respond = async () => '{"q0":0.5}'
   await p.run()
   expect(m.bases).toHaveLength(1)
   expect(p.evaluation.value?.response.answers.noul_1).toEqual({ type: 'noul', noul: 0.5 })

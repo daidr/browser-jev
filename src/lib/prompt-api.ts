@@ -5,6 +5,7 @@ import {
   SYSTEM_PROMPT,
   type JevRequest,
   type JevResponse,
+  type ResponseFormat,
 } from './contract'
 
 export type Availability = 'available' | 'downloadable' | 'downloading' | 'unavailable'
@@ -35,6 +36,7 @@ export interface Evaluation {
   request: JevRequest
   response: JevResponse
   raw: string
+  responseFormat?: ResponseFormat
   elapsedMs: number
   contextUsage?: number
   contextWindow?: number
@@ -100,6 +102,7 @@ export class PromptEngine {
         request,
         response,
         raw,
+        responseFormat: 'compact',
         elapsedMs: performance.now() - start,
         contextUsage: session.contextUsage,
         contextWindow: session.contextWindow,
