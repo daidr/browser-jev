@@ -1,13 +1,17 @@
 <script setup lang="ts">
-defineProps<{ items: { key: string; label: string; value: number }[] }>()
+import { computed } from 'vue'
+const props = defineProps<{ items: { key: string; label: string; value: number }[] }>()
+const sortedItems = computed(() => [...props.items].sort((a, b) => b.value - a.value))
+const highestProbability = computed(() => sortedItems.value[0]?.value)
 </script>
 
 <template>
   <dl class="distribution">
     <div
-      v-for="item in items"
+      v-for="item in sortedItems"
       :key="item.key"
       class="probability"
+      :class="{ 'is-highest': item.value === highestProbability }"
       :style="{ '--probability': `${item.value * 100}%` }"
     >
       <dt>{{ item.label }}</dt>
@@ -19,16 +23,16 @@ defineProps<{ items: { key: string; label: string; value: number }[] }>()
 <style scoped>
 .distribution {
   display: grid;
-  gap: 10px;
+  gap: 6px;
   margin: 0;
 }
 .probability {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;
   align-items: baseline;
-  gap: 16px;
-  padding: 12px 14px;
-  border-radius: 8px;
+  gap: 12px;
+  padding: 7px 12px;
+  border-radius: 6px;
   background: linear-gradient(
     to right,
     var(--answer-tint, #eef3ff) 0 var(--probability),
@@ -36,15 +40,17 @@ defineProps<{ items: { key: string; label: string; value: number }[] }>()
   );
   font-size: var(--text-meta);
   line-height: 1.5;
+  color: rgb(0 0 0 / 50%);
+}
+.is-highest {
+  color: #000;
 }
 dt {
   min-width: 0;
   overflow-wrap: anywhere;
-  color: var(--muted);
 }
 dd {
   margin: 0;
-  color: var(--answer-color, var(--blue));
   text-align: right;
   font-variant-numeric: tabular-nums;
 }

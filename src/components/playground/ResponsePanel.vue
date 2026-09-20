@@ -100,6 +100,7 @@ function download() {
 
 <style scoped>
 .response-panel {
+  container: response / inline-size;
   height: 100%;
   display: flex;
   flex-direction: column;
