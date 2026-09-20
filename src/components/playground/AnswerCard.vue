@@ -51,12 +51,15 @@ const items = computed(() => {
 .answer-card {
   border-bottom: 1px solid var(--border);
   --answer-color: var(--blue);
+  --answer-tint: #eef3ff;
 }
 .answer-card[data-type='noul'] {
   --answer-color: var(--teal);
+  --answer-tint: #edf8f5;
 }
 .answer-card[data-type='score'] {
   --answer-color: #8260b0;
+  --answer-tint: #f5effb;
 }
 summary {
   display: flex;
@@ -78,7 +81,11 @@ summary strong {
   overflow-wrap: anywhere;
 }
 .answer-type {
-  color: var(--muted);
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 6px;
+  color: var(--answer-color);
+  background: var(--answer-tint);
   font-size: var(--text-meta);
   text-transform: capitalize;
 }
