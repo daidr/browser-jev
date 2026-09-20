@@ -11,8 +11,8 @@ const items = computed(() => {
   const { answer, question } = props
   if (answer.type === 'noul')
     return [
-      { key: 'true', label: t('response.true'), value: answer.noul },
-      { key: 'false', label: t('response.false'), value: 1 - answer.noul },
+      { key: 'true', label: 'True', value: answer.noul },
+      { key: 'false', label: 'False', value: 1 - answer.noul },
     ]
   return Object.entries(answer.probabilities).map(([key, value]) => ({
     key,

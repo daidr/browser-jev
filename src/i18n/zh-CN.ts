@@ -40,8 +40,6 @@ export default {
     running: '正在运行…',
     stale: '输入已修改，请重新运行。',
     confidence: '置信度',
-    true: '真',
-    false: '假',
     input: '输入',
     output: '输出',
   },

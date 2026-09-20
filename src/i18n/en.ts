@@ -40,8 +40,6 @@ export default {
     running: 'Running…',
     stale: 'Input changed. Run again.',
     confidence: 'Confidence',
-    true: 'True',
-    false: 'False',
     input: 'Input',
     output: 'Output',
   },
