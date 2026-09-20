@@ -320,7 +320,6 @@ export function usePlayground(environment: Partial<Environment> = {}) {
     validation,
     stale,
     canRun,
-    checkAvailability,
     run,
     cancel,
     selectExample,

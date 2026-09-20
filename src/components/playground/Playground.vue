@@ -35,7 +35,6 @@ const {
   validation,
   stale,
   canRun,
-  checkAvailability,
   run,
   cancel,
   selectExample,
@@ -60,8 +59,8 @@ const splitStyle = computed(() =>
 const availabilityMessage = computed(() => {
   if (availability.value === 'checking') return '正在检查浏览器支持…'
   if (availability.value === 'unsupported')
-    return '当前浏览器不支持 Prompt API，请使用支持此功能的桌面版 Chrome。'
-  return '当前设备无法使用本地模型。'
+    return '当前浏览器不支持 Prompt API。需要使用桌面版 Chrome 148 或更高版本。'
+  return '当前设备无法使用本地模型。需要使用桌面版 Chrome 148 或更高版本。'
 })
 function resize(event: PointerEvent) {
   if (!dragging.value || !workspace.value || stacked.value) return
@@ -151,9 +150,6 @@ function applyImport(value: string) {
       </div>
       <div v-if="!supported" class="unavailable" role="status">
         <p>{{ availabilityMessage }}</p>
-        <button v-if="availability !== 'checking'" class="button" @click="checkAvailability">
-          重新检测
-        </button>
       </div>
       <div v-else ref="workspace" :class="['workspace', { stacked, dragging }]" :style="splitStyle">
         <div class="request-pane">
