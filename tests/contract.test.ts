@@ -8,11 +8,13 @@ import {
 } from '../src/lib/contract'
 import { examples } from '../src/lib/examples'
 
-const request = examples[0]!.request
+const request = validateRequest(examples[0]!.request)
 describe('Jev request compatibility', () => {
   test('accepts mixed primitives and nested descriptions', () => {
-    for (const example of examples)
-      expect(validateRequest(example.request)).toEqual(example.request)
+    for (const example of examples) {
+      const input = { ...example.request, state: example.request.state ?? '' }
+      expect(validateRequest(input)).toEqual(input)
+    }
     expect(
       validateRequest({
         model: 'jev-latest',

@@ -7,7 +7,6 @@ import {
 } from './contract'
 
 export type Availability = 'available' | 'downloadable' | 'downloading' | 'unavailable'
-export type Language = 'en' | 'ja' | 'es' | 'de' | 'fr'
 export interface PromptOptions {
   responseConstraint: Record<string, unknown>
   signal?: AbortSignal
@@ -23,19 +22,13 @@ export interface ModelSession extends EventTarget {
   clone(options?: { signal?: AbortSignal }): Promise<ModelSession>
   destroy(): void
 }
-export interface ModelOptions {
-  expectedInputs: { type: 'text'; languages: Language[] }[]
-  expectedOutputs: { type: 'text'; languages: Language[] }[]
-}
 export interface ModelFactory {
-  availability(options: ModelOptions): Promise<Availability>
-  create(
-    options: ModelOptions & {
-      initialPrompts: { role: 'system'; content: string }[]
-      signal?: AbortSignal
-      monitor?: (monitor: EventTarget) => void
-    },
-  ): Promise<ModelSession>
+  availability(): Promise<Availability>
+  create(options: {
+    initialPrompts: { role: 'system'; content: string }[]
+    signal?: AbortSignal
+    monitor?: (monitor: EventTarget) => void
+  }): Promise<ModelSession>
 }
 export interface Evaluation {
   request: JevRequest
@@ -49,21 +42,14 @@ export interface Evaluation {
 export function getModelFactory(): ModelFactory | undefined {
   return (globalThis as typeof globalThis & { LanguageModel?: ModelFactory }).LanguageModel
 }
-export function modelOptions(language: Language): ModelOptions {
-  return {
-    expectedInputs: [{ type: 'text', languages: [...new Set<Language>(['en', language])] }],
-    expectedOutputs: [{ type: 'text', languages: ['en'] }],
-  }
-}
 
 export class PromptEngine {
   private base?: ModelSession
   constructor(private factory: ModelFactory) {}
 
-  async initialize(language: Language, signal: AbortSignal, onProgress: (value: number) => void) {
+  async initialize(signal: AbortSignal, onProgress: (value: number) => void) {
     this.destroy()
     const session = await this.factory.create({
-      ...modelOptions(language),
       initialPrompts: [{ role: 'system', content: SYSTEM_PROMPT }],
       signal,
       monitor: (monitor) =>
@@ -137,7 +123,7 @@ export function errorMessage(error: unknown): string {
     if (error.name === 'NotAllowedError')
       return 'Chrome 尚未允许模型初始化。请点击「运行请求」并保持页面可见。'
     if (error.name === 'NotSupportedError')
-      return '当前 Chrome 不支持所选语言或 JSON Schema 约束。请更新 Chrome 并检查模型可用性。'
+      return '当前 Chrome 不支持本次输入或 JSON Schema 约束。请更新 Chrome 并检查模型可用性。'
     if (error.name === 'QuotaExceededError')
       return '请求超过本地模型上下文限制，请缩短 State 或减少问题和选项。'
     return error.message

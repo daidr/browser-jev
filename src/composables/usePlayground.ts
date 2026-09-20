@@ -12,11 +12,9 @@ import { questionTemplate, type Example } from '../lib/examples'
 import {
   errorMessage,
   getModelFactory,
-  modelOptions,
   PromptEngine,
   type Availability,
   type Evaluation,
-  type Language,
   type ModelFactory,
 } from '../lib/prompt-api'
 
@@ -40,7 +38,6 @@ export function usePlayground(environment: Partial<Environment> = {}) {
   const stateMode = shallowRef<'text' | 'json'>('text')
   const questionsText = shallowRef('{}')
   const requestedModel = shallowRef('jev-latest')
-  const language = shallowRef<Language>('en')
   const availability = shallowRef<Availability | 'unsupported' | 'checking'>('checking')
   const phase = shallowRef<'idle' | 'initializing' | 'ready' | 'running'>('idle')
   const progress = shallowRef<number | null>(null)
@@ -113,7 +110,7 @@ export function usePlayground(environment: Partial<Environment> = {}) {
     }
     availability.value = 'checking'
     try {
-      const value = await factory.availability(modelOptions(language.value))
+      const value = await factory.availability()
       if (version === capabilityVersion && !disposed) availability.value = value
     } catch (e) {
       if (version === capabilityVersion && !disposed) {
@@ -141,7 +138,7 @@ export function usePlayground(environment: Partial<Environment> = {}) {
         controller = new AbortController()
         const signal = controller.signal
         // Keep create() on the click's call stack to preserve user activation.
-        await engine.initialize(language.value, signal, (value) => {
+        await engine.initialize(signal, (value) => {
           if (!signal.aborted && !disposed) progress.value = value
         })
         signal.throwIfAborted()
@@ -184,7 +181,7 @@ export function usePlayground(environment: Partial<Environment> = {}) {
     error.value = ''
   }
   function selectExample(example: Example) {
-    applyRequest(example.request, example.title)
+    applyRequest({ ...example.request, state: example.request.state ?? '' }, example.title)
   }
   function loadHistory(item: Evaluation) {
     if (!busy.value) {
@@ -242,11 +239,6 @@ export function usePlayground(environment: Partial<Environment> = {}) {
     evaluation.value = null
     error.value = ''
   }
-  watch(language, () => {
-    engine?.destroy()
-    phase.value = 'idle'
-    void checkAvailability()
-  })
   watch([stateText, stateMode, questionsText, requestedModel, title], () => {
     try {
       storage.setItem(
@@ -295,7 +287,6 @@ export function usePlayground(environment: Partial<Environment> = {}) {
     stateText,
     stateMode,
     questionsText,
-    language,
     availability,
     phase,
     progress,

@@ -19,7 +19,6 @@ const {
   stateText,
   stateMode,
   questionsText,
-  language,
   availability,
   phase,
   progress,
@@ -155,16 +154,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
             @format="formatQuestions"
           />
           <footer class="run-bar">
-            <label class="language-select"
-              >输入语言
-              <select v-model="language" :disabled="busy">
-                <option value="en">English</option>
-                <option value="ja">日本語</option>
-                <option value="es">Español</option>
-                <option value="de">Deutsch</option>
-                <option value="fr">Français</option>
-              </select>
-            </label>
             <button v-if="phase === 'running'" class="button primary run-button" @click="cancel">
               <HugeiconsIcon :icon="StopIcon" :size="13" aria-hidden="true" />停止运行
             </button>
@@ -322,26 +311,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 .run-bar {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 10px;
   padding: 12px 18px;
   border-top: 1px solid var(--border);
   flex-shrink: 0;
-}
-.language-select {
-  color: #6d7990;
-  font-size: 10px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.language-select select {
-  border: 0;
-  background: transparent;
-  color: var(--ink);
-  min-width: 0;
-  font-size: 11px;
 }
 .run-button {
   justify-content: center;

@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from 'bun:test'
+import { afterEach, expect, mock, test } from 'bun:test'
 import { createRenderer, nextTick } from 'vue'
 import { usePlayground } from '../src/composables/usePlayground'
 import { examples } from '../src/lib/examples'
@@ -140,6 +140,61 @@ test('saved drafts are preserved instead of replaced by the empty starting state
   const { playground: p } = await mount(model().factory, true, stored)
   expect(p.stateText.value).toBe('My saved input')
   expect(p.inputEmpty.value).toBe(false)
+})
+
+test('selecting examples populates both editor models and clears State when the example omits it', async () => {
+  const { playground: p, stored } = await mount(model().factory)
+  for (const example of examples) {
+    p.selectExample(example)
+    await nextTick()
+    expect(JSON.parse(p.questionsText.value)).toEqual(example.request.questions)
+    if (example.request.state === undefined || typeof example.request.state === 'string') {
+      expect(p.stateMode.value).toBe('text')
+      expect(p.stateText.value).toBe(example.request.state ?? '')
+    } else {
+      expect(p.stateMode.value).toBe('json')
+      expect(JSON.parse(p.stateText.value)).toEqual(example.request.state)
+    }
+    expect(p.validation.value.request).toEqual({
+      ...example.request,
+      state: example.request.state ?? '',
+    })
+    const draft = JSON.parse(stored.get('browserjev.draft.v1')!)
+    expect(draft.stateText).toBe(p.stateText.value)
+    expect(draft.questionsText).toBe(p.questionsText.value)
+  }
+  const questions = { check: { type: 'noul' as const, instructions: 'Is one plus one two?' } }
+  p.selectExample({
+    id: 'no-state',
+    title: 'Questions only',
+    description: '',
+    type: 'noul',
+    request: { model: 'jev-latest', questions },
+  })
+  await nextTick()
+  expect(p.stateMode.value).toBe('text')
+  expect(p.stateText.value).toBe('')
+  expect(JSON.parse(p.questionsText.value)).toEqual(questions)
+  expect(p.canRun.value).toBe(true)
+})
+
+test('availability and creation use the browser defaults without language declarations', async () => {
+  const m = model('available')
+  m.ready()
+  const availability = mock(m.factory.availability)
+  const create = mock(m.factory.create)
+  m.factory.availability = availability
+  m.factory.create = create
+  const { playground: p } = await mount(m.factory)
+  expect(availability).toHaveBeenCalledWith()
+  p.addQuestion('noul')
+  await p.run()
+  const options = create.mock.calls[0]![0]
+  expect(options).not.toHaveProperty('expectedInputs')
+  expect(options).not.toHaveProperty('expectedOutputs')
+  expect(options).toHaveProperty('initialPrompts')
+  expect(options.signal).toBeInstanceOf(AbortSignal)
+  expect(p.evaluation.value?.response.answers.noul_1).toEqual({ type: 'noul', noul: 0.8 })
 })
 
 test('unsupported API, insecure origin and unavailable device hide the workspace and cannot run', async () => {

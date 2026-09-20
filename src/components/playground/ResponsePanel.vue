@@ -78,15 +78,12 @@ function download() {
     </header>
     <div v-if="running" class="running-banner" role="status">
       <span class="spinner" />正在本地评估
-      {{ Object.keys(request?.questions ?? {}).length }} 个问题…<small v-if="evaluation"
-        >下方显示上次结果</small
-      >
+      {{ Object.keys(request?.questions ?? {}).length }} 个问题…
     </div>
     <div v-if="stale" class="stale-banner">输入已修改。下方为上次运行的快照，请重新运行。</div>
     <template v-if="evaluation">
       <div class="response-meta">
-        <span class="provider"><span class="status-dot" />Chrome Prompt API</span
-        ><span>{{ (evaluation.elapsedMs / 1000).toFixed(2) }} s</span
+        <span class="elapsed">{{ (evaluation.elapsedMs / 1000).toFixed(2) }} s</span
         ><button class="icon-button" aria-label="复制响应 JSON" title="复制响应 JSON" @click="copy">
           <HugeiconsIcon :icon="Copy01Icon" :size="14" aria-hidden="true" /></button
         ><button
@@ -192,15 +189,8 @@ function download() {
   color: var(--muted);
   font-size: 10px;
 }
-.provider {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.elapsed {
   margin-right: auto;
-  color: #68758c;
-}
-.provider .status-dot {
-  color: var(--teal);
 }
 .response-meta .icon-button {
   padding: 4px;
@@ -381,9 +371,6 @@ function download() {
 .running-banner {
   background: #eef3ff;
   color: var(--blue);
-}
-.running-banner small {
-  margin-left: auto;
 }
 .stale-banner {
   background: #fffaeb;

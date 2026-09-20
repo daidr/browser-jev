@@ -11,7 +11,9 @@ bun run dev
 
 在桌面 Chrome 中打开 `http://127.0.0.1:5173`，从结果面板选择示例或编辑输入，然后点击「运行请求」（Ctrl / ⌘ + Enter）。首次运行自动准备模型；需要下载时弹出进度窗口，准备完成后自动执行本次请求。可取消并重新运行。`bun run build` 构建；`bun run preview` 预览构建结果；`bun test` 运行契约、工作台状态和会话生命周期测试。
 
-Chrome 官方文档当前列出 Web Prompt API 从 Chrome 148 提供，要求安全上下文（HTTPS 或 localhost）及符合要求的设备。程序以 API 检测和 `LanguageModel.availability()` 的实际结果为准；不支持或模型不可用时，以简短提示替代输入和结果面板。下载进度取自浏览器的 `downloadprogress`，尚未收到数值时使用不确定进度条。不会替用户修改浏览器设置。支持检测时与创建会话时使用相同语言参数。官方当前语言列表为英语、日语、西班牙语、德语、法语，选择器位于运行按钮旁；界面中文不代表模型保证中文质量。[Chrome 文档](https://developer.chrome.com/docs/ai/prompt-api)
+Chrome 官方文档当前列出 Web Prompt API 从 Chrome 148 提供，要求安全上下文（HTTPS 或 localhost）及符合要求的设备。程序以 API 检测和 `LanguageModel.availability()` 的实际结果为准；不支持或模型不可用时，以简短提示替代输入和结果面板。下载进度取自浏览器的 `downloadprogress`，尚未收到数值时使用不确定进度条。不会替用户修改浏览器设置。[Chrome 文档](https://developer.chrome.com/docs/ai/prompt-api)
+
+无需选择输入语言；可用性检测和会话创建均不传 `expectedInputs` / `expectedOutputs`，使用浏览器模型的默认能力。省略语言声明不会改变模型支持的语言范围。[Prompt API 语言说明](https://github.com/webmachinelearning/prompt-api#multilingual-content-and-expected-input-languages)
 
 ## 已实现
 
@@ -64,16 +66,16 @@ Chrome 官方文档当前列出 Web Prompt API 从 Chrome 148 提供，要求安
 适配器位于 `src/lib/prompt-api.ts`，契约和 Schema 编译位于 `src/lib/contract.ts`。
 
 ```ts
-import { PromptEngine, getModelFactory, modelOptions } from './src/lib/prompt-api'
+import { PromptEngine, getModelFactory } from './src/lib/prompt-api'
 import { validateRequest } from './src/lib/contract'
 
 const factory = getModelFactory()
-if (!factory || (await factory.availability(modelOptions('en'))) === 'unavailable') {
+if (!factory || (await factory.availability()) === 'unavailable') {
   throw new Error('Prompt API unavailable')
 }
 const engine = new PromptEngine(factory)
 // 在用户点击事件中初始化。onProgress 接收 0–1 的下载进度。
-await engine.initialize('en', new AbortController().signal, onProgress)
+await engine.initialize(new AbortController().signal, onProgress)
 try {
   const result = await engine.evaluate(validateRequest(request), abortController.signal)
   console.log(result.response)

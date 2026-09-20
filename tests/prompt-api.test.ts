@@ -47,7 +47,7 @@ test('every evaluation clones a clean base and destroys only its child', async (
   const base = new Session()
   const engine = new PromptEngine(factory(base))
   const signal = new AbortController().signal
-  await engine.initialize('en', signal, () => {})
+  await engine.initialize(signal, () => {})
   const one = await engine.evaluate(request, signal)
   await engine.evaluate(request, signal)
   expect(base.children).toHaveLength(2)
@@ -64,7 +64,7 @@ test('rejects overflowing input before inference and releases session', async ()
   base.contextWindow = 50
   const engine = new PromptEngine(factory(base))
   const signal = new AbortController().signal
-  await engine.initialize('en', signal, () => {})
+  await engine.initialize(signal, () => {})
   await expect(engine.evaluate(request, signal)).rejects.toThrow('超过')
   expect(base.children[0]!.calls).toHaveLength(0)
   expect(base.children[0]!.destroyed).toBe(true)
@@ -76,7 +76,7 @@ test('never exposes a malformed or truncated answer as success', async () => {
     base.result = overflow ? '{"q0":{"noul":0.8}}' : 'not json'
     const engine = new PromptEngine(factory(base))
     const signal = new AbortController().signal
-    await engine.initialize('en', signal, () => {})
+    await engine.initialize(signal, () => {})
     await expect(engine.evaluate(request, signal)).rejects.toThrow()
     expect(base.children[0]!.destroyed).toBe(true)
   }
@@ -85,7 +85,7 @@ test('cancellation cannot publish a late response', async () => {
   const base = new Session()
   const controller = new AbortController()
   const engine = new PromptEngine(factory(base))
-  await engine.initialize('en', new AbortController().signal, () => {})
+  await engine.initialize(new AbortController().signal, () => {})
   base.clone = async () => {
     const child = new Session()
     child.prompt = async () => {

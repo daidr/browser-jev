@@ -5,7 +5,7 @@ export interface Example {
   title: string
   description: string
   type: 'mixed' | Question['type']
-  request: JevRequest
+  request: Omit<JevRequest, 'state'> & { state?: JevRequest['state'] }
 }
 export const examples: Example[] = [
   {
