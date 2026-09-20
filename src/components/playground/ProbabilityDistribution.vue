@@ -4,14 +4,14 @@ defineProps<{ items: { key: string; label: string; value: number }[] }>()
 
 <template>
   <dl class="distribution">
-    <div v-for="item in items" :key="item.key" class="probability">
+    <div
+      v-for="item in items"
+      :key="item.key"
+      class="probability"
+      :style="{ '--probability': `${item.value * 100}%` }"
+    >
       <dt>{{ item.label }}</dt>
-      <dd>
-        {{ (item.value * 100).toFixed(1) }}%
-        <span class="bar-track" aria-hidden="true">
-          <span class="bar" :style="{ width: `${item.value * 100}%` }" />
-        </span>
-      </dd>
+      <dd>{{ (item.value * 100).toFixed(1) }}%</dd>
     </div>
   </dl>
 </template>
@@ -19,16 +19,21 @@ defineProps<{ items: { key: string; label: string; value: number }[] }>()
 <style scoped>
 .distribution {
   display: grid;
-  gap: 18px;
+  gap: 10px;
   margin: 0;
 }
 .probability {
-  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;
   align-items: baseline;
   gap: 16px;
-  padding-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: linear-gradient(
+    to right,
+    var(--answer-tint, #eef3ff) 0 var(--probability),
+    transparent var(--probability) 100%
+  );
   font-size: var(--text-meta);
   line-height: 1.5;
 }
@@ -39,23 +44,8 @@ dt {
 }
 dd {
   margin: 0;
-  flex-shrink: 0;
+  color: var(--answer-color, var(--blue));
+  text-align: right;
   font-variant-numeric: tabular-nums;
-}
-.bar-track {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 6px;
-  border-radius: 3px;
-  background: #edf1f7;
-  overflow: hidden;
-}
-.bar {
-  display: block;
-  height: 100%;
-  background: var(--answer-color, var(--blue));
-  border-radius: inherit;
 }
 </style>

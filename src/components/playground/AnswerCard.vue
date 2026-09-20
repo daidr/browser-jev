@@ -132,4 +132,10 @@ summary strong {
   font-size: var(--text-meta);
   font-weight: 400;
 }
+.confidence {
+  margin-left: auto;
+  color: var(--answer-color);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 </style>
