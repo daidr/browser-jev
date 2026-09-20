@@ -70,7 +70,7 @@ Text → JSON 会将原文编码为 JSON 字符串，包括必要的引号和转
 1. 模型只输出 Noul 数值或完整候选概率。解码器严格检查字段、候选、范围和有限值；缺字段、全零分布、非法 JSON 均直接报错，不造答案。
 2. 正数分布归一化为总和 1。Choice 用 argmax（相同时按输入顺序）；Score 为 `Σ(index × probability)`。这保证答案内部一致。
 3. TypeSafe 文档未公开 confidence 的精确公式。本实现明确采用 `1 − H(p) / log(n)`，单候选为 1；它只衡量本地估计分布的集中程度。不能把它等同于 Jev 的数值或正确率。[Confidence 文档](https://docs.typesafe.ai/confidence)
-4. `usage.input_tokens` 仅在 Chrome 提供 `measureContextUsage()` 时写入，包括初始系统上下文和携带 Schema 的输入。Chrome 没有输出 token 计费字段，因此省略 `output_tokens`；UI 显示「输出 N/A token」，有值时显示「输出 n tokens」，不填 0 或字符估算。文档中的两个 usage 子字段都是可选项。
+4. `usage.input_tokens` 来自 Chrome 的 `measureContextUsage()` 加上初始系统上下文，数值遵循浏览器计量；当前 Chromium 实现未计入自动附加的 Schema。`output_tokens` 为可选字段，当前省略。界面只显示输入 token 和运行耗时。[Chromium 计量实现](https://github.com/chromium/chromium/blob/main/third_party/blink/renderer/modules/ai/language_model.cc)
 5. 每个请求通过一次约束生成完成多个问题；输出生成仍是自回归的，不声称 Jev 的原生并行性能。
 
 ## 在代码中调用

@@ -41,7 +41,6 @@ export default {
     stale: '输入已修改，请重新运行。',
     confidence: '置信度',
     input: '输入',
-    output: '输出',
   },
   examples: { title: '示例' },
   availability: {

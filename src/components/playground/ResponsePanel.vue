@@ -88,10 +88,6 @@ function download() {
       </div>
       <footer class="response-foot">
         <TokenCount :label="t('response.input')" :count="evaluation.response.usage.input_tokens" />
-        <TokenCount
-          :label="t('response.output')"
-          :count="evaluation.response.usage.output_tokens"
-        />
         <span class="elapsed">{{ (evaluation.elapsedMs / 1000).toFixed(2) }} s</span>
       </footer>
     </template>

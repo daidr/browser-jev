@@ -41,7 +41,6 @@ export default {
     stale: 'Input changed. Run again.',
     confidence: 'Confidence',
     input: 'Input',
-    output: 'Output',
   },
   examples: { title: 'Examples' },
   availability: {
