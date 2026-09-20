@@ -93,9 +93,11 @@ summary strong {
   flex-shrink: 0;
   color: var(--muted);
   transform: rotate(-90deg);
+  transform-origin: center;
+  transition: transform 180ms ease;
 }
-[open] .chevron {
-  transform: rotate(0);
+.answer-card[open] > summary .chevron {
+  transform: rotate(0deg);
 }
 .answer-content {
   padding: 0 20px 24px;

@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, shallowRef } from 'vue'
 import {
   Layout2ColumnIcon,
   Layout2RowIcon,
-  RotateLeft01Icon,
+  Delete01Icon,
   PlayIcon,
   StopIcon,
 } from '@hugeicons/core-free-icons'
@@ -126,7 +126,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
           <footer class="run-bar">
             <AppButton
               label="清空"
-              :icon="RotateLeft01Icon"
+              :icon="Delete01Icon"
               variant="quiet"
               :disabled="busy || inputEmpty"
               @click="clear"
