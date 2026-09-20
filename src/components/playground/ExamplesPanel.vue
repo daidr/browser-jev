@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ArrowUpRight } from 'lucide-vue-next'
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { ArrowUpRight01Icon } from '@hugeicons/core-free-icons'
 import { examples, type Example } from '../../lib/examples'
 defineProps<{ disabled: boolean }>()
 const emit = defineEmits<{ select: [example: Example] }>()
@@ -22,7 +23,7 @@ const emit = defineEmits<{ select: [example: Example] }>()
           ><strong>{{ example.title }}</strong
           ><small>{{ example.description }}</small></span
         >
-        <ArrowUpRight :size="16" />
+        <HugeiconsIcon :icon="ArrowUpRight01Icon" :size="16" aria-hidden="true" />
       </button>
     </div>
   </section>

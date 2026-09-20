@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, shallowRef, useTemplateRef, watch } from 'vue'
-import { X, Download, Copy } from 'lucide-vue-next'
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { Cancel01Icon, Download01Icon, Copy01Icon } from '@hugeicons/core-free-icons'
 import { createPlan, pretty, validateRequest, type JevRequest } from '../../lib/contract'
 import type { Evaluation } from '../../lib/prompt-api'
 const CodeEditor = defineAsyncComponent(() => import('./CodeEditor.vue'))
@@ -84,7 +85,7 @@ function download() {
           <p>Jev 输入结构，Chrome 本地推理。</p>
         </div>
         <button class="icon-button" aria-label="关闭检查窗口" @click="open = false">
-          <X :size="18" />
+          <HugeiconsIcon :icon="Cancel01Icon" :size="18" aria-hidden="true" />
         </button>
       </header>
       <div class="inspect-toolbar">
@@ -96,9 +97,9 @@ function download() {
           </button>
         </div>
         <button class="icon-button" aria-label="复制当前内容" title="复制" @click="copy">
-          <Copy :size="15" /></button
+          <HugeiconsIcon :icon="Copy01Icon" :size="15" aria-hidden="true" /></button
         ><button class="icon-button" aria-label="下载当前内容" title="下载" @click="download">
-          <Download :size="15" />
+          <HugeiconsIcon :icon="Download01Icon" :size="15" aria-hidden="true" />
         </button>
       </div>
       <div class="inspect-code">

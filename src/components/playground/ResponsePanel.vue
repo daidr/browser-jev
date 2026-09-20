@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, shallowRef } from 'vue'
-import { Check, Copy, ArrowDownToLine, Activity, ChevronDown } from 'lucide-vue-next'
+import { HugeiconsIcon } from '@hugeicons/vue'
+import {
+  Tick02Icon,
+  Copy01Icon,
+  Download01Icon,
+  Activity01Icon,
+  ArrowDown01Icon,
+} from '@hugeicons/core-free-icons'
 import { describe, pretty, type JevRequest, type Answer, type Question } from '../../lib/contract'
 import type { Evaluation } from '../../lib/prompt-api'
 const CodeEditor = defineAsyncComponent(() => import('./CodeEditor.vue'))
@@ -58,9 +65,11 @@ function download() {
   <section class="response-panel" :aria-busy="running">
     <header class="panel-header">
       <div class="section-heading">
-        <Activity :size="15" />
+        <HugeiconsIcon :icon="Activity01Icon" :size="15" aria-hidden="true" />
         <h2>Response</h2>
-        <span v-if="evaluation" class="success-tag"><Check :size="11" />已完成</span>
+        <span v-if="evaluation" class="success-tag"
+          ><HugeiconsIcon :icon="Tick02Icon" :size="11" aria-hidden="true" />已完成</span
+        >
       </div>
       <div class="segmented small">
         <button :aria-pressed="view === 'overview'" @click="view = 'overview'">概览</button
@@ -79,14 +88,14 @@ function download() {
         <span class="provider"><span class="status-dot" />Chrome Prompt API</span
         ><span>{{ (evaluation.elapsedMs / 1000).toFixed(2) }} s</span
         ><button class="icon-button" aria-label="复制响应 JSON" title="复制响应 JSON" @click="copy">
-          <Copy :size="14" /></button
+          <HugeiconsIcon :icon="Copy01Icon" :size="14" aria-hidden="true" /></button
         ><button
           class="icon-button"
           aria-label="下载响应 JSON"
           title="下载响应 JSON"
           @click="download"
         >
-          <ArrowDownToLine :size="14" />
+          <HugeiconsIcon :icon="Download01Icon" :size="14" aria-hidden="true" />
         </button>
       </div>
       <div v-if="view === 'json'" class="response-json">
@@ -106,7 +115,7 @@ function download() {
                 describe(row.question.instructions)
               }}</span></span
             ><span :class="['type-badge', row.question.type]">{{ row.question.type }}</span
-            ><ChevronDown :size="14" />
+            ><HugeiconsIcon :icon="ArrowDown01Icon" :size="14" aria-hidden="true" />
           </summary>
           <template v-if="row.answer">
             <div class="answer-value">

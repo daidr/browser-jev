@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, shallowRef, useTemplateRef } from 'vue'
-import { Braces, Columns2, Rows2, RotateCcw, Play, Square, X } from 'lucide-vue-next'
+import { HugeiconsIcon } from '@hugeicons/vue'
+import {
+  SourceCodeIcon,
+  Layout2ColumnIcon,
+  Layout2RowIcon,
+  RotateLeft01Icon,
+  PlayIcon,
+  StopIcon,
+  Cancel01Icon,
+} from '@hugeicons/core-free-icons'
 import { usePlayground } from '../../composables/usePlayground'
 import RequestEditor from './RequestEditor.vue'
 import ResponsePanel from './ResponsePanel.vue'
@@ -108,10 +117,10 @@ function applyImport(value: string) {
           </option>
         </select>
         <button class="text-button" :disabled="busy" @click="clear">
-          <RotateCcw :size="13" />清空
+          <HugeiconsIcon :icon="RotateLeft01Icon" :size="13" aria-hidden="true" />清空
         </button>
         <button class="button compact" @click="inspectOpen = true">
-          <Braces :size="14" />请求 / Schema
+          <HugeiconsIcon :icon="SourceCodeIcon" :size="14" aria-hidden="true" />请求 / Schema
         </button>
         <div class="segmented layout-switch">
           <button
@@ -120,7 +129,7 @@ function applyImport(value: string) {
             aria-label="左右布局"
             @click="stacked = false"
           >
-            <Columns2 :size="14" />
+            <HugeiconsIcon :icon="Layout2ColumnIcon" :size="14" aria-hidden="true" />
           </button>
           <button
             :aria-pressed="stacked"
@@ -128,7 +137,7 @@ function applyImport(value: string) {
             aria-label="上下布局"
             @click="stacked = true"
           >
-            <Rows2 :size="14" />
+            <HugeiconsIcon :icon="Layout2RowIcon" :size="14" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -137,7 +146,7 @@ function applyImport(value: string) {
       <div v-if="error" class="error-banner" role="alert">
         <span>{{ error }}</span>
         <button class="icon-button" aria-label="关闭错误提示" @click="error = ''">
-          <X :size="14" />
+          <HugeiconsIcon :icon="Cancel01Icon" :size="14" aria-hidden="true" />
         </button>
       </div>
       <div v-if="!supported" class="unavailable" role="status">
@@ -171,7 +180,7 @@ function applyImport(value: string) {
               </select>
             </label>
             <button v-if="phase === 'running'" class="button primary run-button" @click="cancel">
-              <Square :size="13" />停止运行
+              <HugeiconsIcon :icon="StopIcon" :size="13" aria-hidden="true" />停止运行
             </button>
             <button
               v-else
@@ -180,7 +189,9 @@ function applyImport(value: string) {
               :title="validation.error || 'Ctrl / ⌘ + Enter'"
               @click="run"
             >
-              <Play :size="14" fill="currentColor" />运行请求<kbd>Ctrl ↵</kbd>
+              <HugeiconsIcon :icon="PlayIcon" :size="14" aria-hidden="true" />运行请求<kbd
+                >Ctrl ↵</kbd
+              >
             </button>
           </footer>
         </div>
@@ -219,7 +230,7 @@ function applyImport(value: string) {
     <div v-if="notice" class="toast" role="status">
       <span>{{ notice }}</span
       ><button class="icon-button" aria-label="关闭通知" @click="notice = ''">
-        <X :size="13" />
+        <HugeiconsIcon :icon="Cancel01Icon" :size="13" aria-hidden="true" />
       </button>
     </div>
     <ModelDownloadDialog

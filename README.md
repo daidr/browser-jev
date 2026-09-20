@@ -1,6 +1,6 @@
 # BrowserJev
 
-用 Chrome Prompt API 的 `responseConstraint` JSON Schema 能力，运行 Jev 格式的结构化决策 Playground。Bun + Vite 8 + Vue 3 + TypeScript；没有服务端推理、API Key、云端回退或模拟结果。
+用 Chrome Prompt API 的 `responseConstraint` JSON Schema 能力，运行 Jev 格式的结构化决策 Playground。Bun + Vite 8 + Vue 3 + TypeScript；没有服务端推理、API Key、云端回退或模拟结果。图标使用 [Hugeicons 官方 Vue 组件与免费 Stroke Rounded 图标包](https://hugeicons.com/docs/integrations/vue/quick-start)，按需导入。
 
 ## 运行
 

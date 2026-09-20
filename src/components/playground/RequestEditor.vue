@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { Braces, AlignLeft, Plus, WrapText } from 'lucide-vue-next'
+import { HugeiconsIcon } from '@hugeicons/vue'
+import {
+  SourceCodeIcon,
+  TextAlignLeftIcon,
+  Add01Icon,
+  TextWrapIcon,
+} from '@hugeicons/core-free-icons'
 import { defineAsyncComponent } from 'vue'
 import type { Question } from '../../lib/contract'
 const CodeEditor = defineAsyncComponent(() => import('./CodeEditor.vue'))
@@ -33,7 +39,7 @@ const emit = defineEmits<{
             title="纯文本"
             @click="emit('mode', 'text')"
           >
-            <AlignLeft :size="14" />文本
+            <HugeiconsIcon :icon="TextAlignLeftIcon" :size="14" aria-hidden="true" />文本
           </button>
           <button
             :aria-pressed="stateMode === 'json'"
@@ -41,7 +47,7 @@ const emit = defineEmits<{
             title="JSON"
             @click="emit('mode', 'json')"
           >
-            <Braces :size="14" />JSON
+            <HugeiconsIcon :icon="SourceCodeIcon" :size="14" aria-hidden="true" />JSON
           </button>
         </div>
       </header>
@@ -66,19 +72,19 @@ const emit = defineEmits<{
           title="格式化 Questions JSON"
           @click="emit('format')"
         >
-          <WrapText :size="15" />格式化
+          <HugeiconsIcon :icon="TextWrapIcon" :size="15" aria-hidden="true" />格式化
         </button>
       </header>
       <div class="primitive-tools">
         <span>添加问题</span>
         <button class="primitive-button noul" :disabled="disabled" @click="emit('add', 'noul')">
-          <Plus :size="12" /> Noul
+          <HugeiconsIcon :icon="Add01Icon" :size="12" aria-hidden="true" /> Noul
         </button>
         <button class="primitive-button choice" :disabled="disabled" @click="emit('add', 'choice')">
-          <Plus :size="12" /> Choice
+          <HugeiconsIcon :icon="Add01Icon" :size="12" aria-hidden="true" /> Choice
         </button>
         <button class="primitive-button score" :disabled="disabled" @click="emit('add', 'score')">
-          <Plus :size="12" /> Score
+          <HugeiconsIcon :icon="Add01Icon" :size="12" aria-hidden="true" /> Score
         </button>
       </div>
       <div class="questions-code">
