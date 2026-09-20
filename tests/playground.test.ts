@@ -1,4 +1,5 @@
-import { afterEach, expect, mock, test } from 'bun:test'
+import { afterEach, expect, jest, mock, test } from 'bun:test'
+import { setImmediate } from 'node:timers'
 import { createRenderer, nextTick } from 'vue'
 import { usePlayground } from '../src/composables/usePlayground'
 import { examples, getExamples, questionTemplate } from '../src/lib/examples'
@@ -22,6 +23,7 @@ const renderer = createRenderer<object, object>({
 const cleanup: (() => void)[] = []
 afterEach(() => {
   cleanup.splice(0).forEach((unmount) => unmount())
+  jest.useRealTimers()
 })
 
 class Session extends EventTarget implements ModelSession {
@@ -111,6 +113,7 @@ async function mount(
   secure = true,
   stored = new Map<string, string>(),
   activation = activationSource(),
+  availabilityTimeoutMs?: number,
 ) {
   let playground!: ReturnType<typeof usePlayground>
   const i18n = createAppI18n(readLocale({ getItem: (key) => stored.get(key) ?? null }))
@@ -118,6 +121,7 @@ async function mount(
     setup() {
       playground = usePlayground({
         getFactory: () => factory,
+        availabilityTimeoutMs,
         isSecureContext: () => secure,
         userActivation: activation,
         storage: {
@@ -133,7 +137,7 @@ async function mount(
   app.use(i18n)
   app.mount({})
   cleanup.push(() => app.unmount())
-  await nextTick()
+  await flushPromises()
   return { playground, stored, app, i18n, activation }
 }
 
@@ -493,6 +497,72 @@ test('unsupported API, insecure origin and unavailable device hide the workspace
     await p.run()
     expect(p.phase.value).toBe('idle')
   }
+})
+
+test('a hanging availability check becomes unsupported at 5 seconds and ignores late success', async () => {
+  jest.useFakeTimers()
+  const m = model('available')
+  const pending = Promise.withResolvers<Availability>()
+  m.factory.availability = () => pending.promise
+  const { playground: p, activation } = await mount(m.factory)
+  p.addQuestion('noul')
+  expect(p.availability.value).toBe('checking')
+  jest.advanceTimersByTime(4_999)
+  await flushPromises()
+  expect(p.availability.value).toBe('checking')
+  jest.advanceTimersByTime(1)
+  await flushPromises()
+  expect(p.availability.value).toBe('unsupported')
+  expect(p.supported.value).toBe(false)
+  expect(p.canRun.value).toBe(false)
+  pending.resolve('available')
+  await flushPromises()
+  activation.activate()
+  await p.run()
+  expect(p.availability.value).toBe('unsupported')
+  expect(p.error.value).toBe('')
+  expect(m.bases).toHaveLength(0)
+})
+
+test('availability timeout is configurable and handles a late rejection', async () => {
+  jest.useFakeTimers()
+  const m = model()
+  const pending = Promise.withResolvers<Availability>()
+  m.factory.availability = () => pending.promise
+  const { playground: p } = await mount(m.factory, true, new Map(), activationSource(), 100)
+  jest.advanceTimersByTime(99)
+  await flushPromises()
+  expect(p.availability.value).toBe('checking')
+  jest.advanceTimersByTime(1)
+  await flushPromises()
+  expect(p.availability.value).toBe('unsupported')
+  pending.reject(new Error('Late browser failure'))
+  await flushPromises()
+  expect(p.availability.value).toBe('unsupported')
+  expect(p.error.value).toBe('')
+  expect(m.bases).toHaveLength(0)
+})
+
+test('availability completion clears its timeout, while unmount prevents late warmup', async () => {
+  jest.useFakeTimers()
+  const ready = await mount(model('available').factory)
+  expect(ready.playground.availability.value).toBe('available')
+  expect(jest.getTimerCount()).toBe(0)
+  jest.advanceTimersByTime(5_000)
+  await flushPromises()
+  expect(ready.playground.availability.value).toBe('available')
+
+  const m = model('available')
+  const pending = Promise.withResolvers<Availability>()
+  m.factory.availability = () => pending.promise
+  const { playground: p, app } = await mount(m.factory)
+  expect(jest.getTimerCount()).toBe(1)
+  app.unmount()
+  expect(jest.getTimerCount()).toBe(0)
+  pending.resolve('available')
+  await flushPromises()
+  expect(p.availability.value).toBe('checking')
+  expect(m.bases).toHaveLength(0)
 })
 
 test('one click starts create synchronously, reports real download progress and then evaluates once', async () => {

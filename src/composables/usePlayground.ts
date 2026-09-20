@@ -25,6 +25,7 @@ const DRAFT_KEY = 'browserjev.draft.v1'
 const HISTORY_KEY = 'browserjev.history.v1'
 interface Environment {
   getFactory: () => ModelFactory | undefined
+  availabilityTimeoutMs: number
   isSecureContext: () => boolean
   storage: Pick<Storage, 'getItem' | 'setItem'>
   userActivation: UserActivationSource
@@ -72,6 +73,7 @@ export function usePlayground(environment: Partial<Environment> = {}) {
   let controller: AbortController | undefined
   let preparation: { controller: AbortController; promise: Promise<void> } | undefined
   let stopWaitingForActivation: (() => void) | undefined
+  let availabilityTimer: ReturnType<typeof setTimeout> | undefined
   let capabilityVersion = 0
   let disposed = false
   const busy = computed(() => activity.value !== 'idle')
@@ -191,7 +193,14 @@ export function usePlayground(environment: Partial<Environment> = {}) {
     }
     availability.value = 'checking'
     try {
-      const value = await factory.availability()
+      const timeout = new Promise<'unsupported'>((resolve) => {
+        availabilityTimer = setTimeout(
+          () => resolve('unsupported'),
+          environment.availabilityTimeoutMs ?? 5_000,
+        )
+      })
+      // Some Chromium derivatives expose the API but never settle availability().
+      const value = await Promise.race([factory.availability(), timeout])
       if (version === capabilityVersion && !disposed) {
         availability.value = value
         warmup()
@@ -201,6 +210,8 @@ export function usePlayground(environment: Partial<Environment> = {}) {
         availability.value = 'unavailable'
         errorSource.value = e
       }
+    } finally {
+      clearTimeout(availabilityTimer)
     }
   }
   async function run() {
@@ -360,6 +371,7 @@ export function usePlayground(environment: Partial<Environment> = {}) {
   })
   onBeforeUnmount(() => {
     disposed = true
+    clearTimeout(availabilityTimer)
     stopActivationListener()
     preparation?.controller.abort()
     controller?.abort()

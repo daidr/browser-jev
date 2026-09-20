@@ -21,6 +21,8 @@ The interface uses [vue-i18n 11 Composition API](https://vue-i18n.intlify.dev/gu
 
 Chrome's documentation lists web Prompt API support from Chrome 148, requiring a secure context (HTTPS or localhost) and an eligible device. The application checks API support and the actual result of `LanguageModel.availability()`. When unsupported or unavailable, a short message replaces the input and response panels. Download progress comes from the browser's `downloadprogress` event, with an indeterminate bar until a value is available. The application does not change browser settings. [Chrome documentation](https://developer.chrome.com/docs/ai/prompt-api)
 
+Availability checks time out after 5 seconds and treat the browser as unsupported if it does not respond. Late results do not enable the workspace or start model preparation. The timeout can be configured with `usePlayground({ availabilityTimeoutMs: 5_000 })`.
+
 No input language selection is needed. Availability checks and session creation omit `expectedInputs` and `expectedOutputs`, using the model's defaults. Omitting language declarations does not expand the model's supported languages. [Prompt API language support](https://github.com/webmachinelearning/prompt-api#multilingual-content-and-expected-input-languages)
 
 ## Features

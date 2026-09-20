@@ -21,6 +21,8 @@ bun run dev
 
 Chrome 官方文档当前列出 Web Prompt API 从 Chrome 148 提供，要求安全上下文（HTTPS 或 localhost）及符合要求的设备。程序以 API 检测和 `LanguageModel.availability()` 的实际结果为准；不支持或模型不可用时，以简短提示替代输入和结果面板。下载进度取自浏览器的 `downloadprogress`，尚未收到数值时使用不确定进度条。不会替用户修改浏览器设置。[Chrome 文档](https://developer.chrome.com/docs/ai/prompt-api)
 
+可用性检测默认超时为 5 秒，浏览器未返回时按不支持处理。迟到的结果不会重新启用工作台或触发模型准备。可通过 `usePlayground({ availabilityTimeoutMs: 5_000 })` 调整超时时间。
+
 无需选择输入语言；可用性检测和会话创建均不传 `expectedInputs` / `expectedOutputs`，使用浏览器模型的默认能力。省略语言声明不会改变模型支持的语言范围。[Prompt API 语言说明](https://github.com/webmachinelearning/prompt-api#multilingual-content-and-expected-input-languages)
 
 ## 已实现
