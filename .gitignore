@@ -2,5 +2,6 @@ node_modules/
 dist/
 .venv/
 .temp/
+/docs/
 *.local
 .DS_Store
