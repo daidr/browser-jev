@@ -14,7 +14,6 @@ watch(
   i18n.global.locale,
   (value) => {
     document.documentElement.lang = value
-    document.title = i18n.global.t('app.title')
     document
       .querySelector('meta[name="description"]')
       ?.setAttribute('content', i18n.global.t('app.description'))

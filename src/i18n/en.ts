@@ -1,7 +1,6 @@
 import { errorMessages } from '../lib/errors'
 export default {
   app: {
-    title: 'BrowserJev — Decision playground',
     description: 'Run Jev-format structured decisions in your browser with Chrome built-in AI.',
   },
   actions: {

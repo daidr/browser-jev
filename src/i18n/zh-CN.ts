@@ -1,7 +1,6 @@
 import type en from './en'
 export default {
   app: {
-    title: 'BrowserJev — 决策工作台',
     description: '使用 Chrome 内置 AI，在浏览器中运行 Jev 格式的结构化决策。',
   },
   actions: {
