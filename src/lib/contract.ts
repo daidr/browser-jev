@@ -1,3 +1,5 @@
+import { AppError, type ErrorCode } from './errors'
+
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json }
 export type Description = string | Json[] | { [key: string]: Json }
 export type NoulQuestion = {
@@ -47,26 +49,23 @@ export const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isDescription = (value: unknown): value is Description =>
   typeof value === 'string' || Array.isArray(value) || isRecord(value)
 
-export class ContractError extends Error {
-  constructor(
-    public path: string,
-    message: string,
-  ) {
-    super(`${path}: ${message}`)
+export class ContractError extends AppError {
+  constructor(path: string, code: ErrorCode) {
+    super(code, {}, path)
     this.name = 'ContractError'
   }
 }
-function fail(path: string, message: string): never {
-  throw new ContractError(path, message)
+function fail(path: string, code: ErrorCode): never {
+  throw new ContractError(path, code)
 }
 
 function assertJson(value: unknown, path = 'request', ancestors = new Set<object>()): void {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return
   if (typeof value === 'number' && Number.isFinite(value)) return
-  if (typeof value !== 'object' || value === null) fail(path, '仅接受可序列化 JSON 值和有限数值')
-  if (ancestors.has(value)) fail(path, 'JSON 不能包含循环引用')
+  if (typeof value !== 'object' || value === null) fail(path, 'jsonValue')
+  if (ancestors.has(value)) fail(path, 'circularJson')
   if (!Array.isArray(value) && ![Object.prototype, null].includes(Object.getPrototypeOf(value)))
-    fail(path, '需要普通 JSON 对象')
+    fail(path, 'plainObject')
   ancestors.add(value)
   for (const [key, child] of Object.entries(value)) assertJson(child, `${path}.${key}`, ancestors)
   ancestors.delete(value)
@@ -74,36 +73,35 @@ function assertJson(value: unknown, path = 'request', ancestors = new Set<object
 
 export function validateRequest(value: unknown): JevRequest {
   assertJson(value)
-  if (!isRecord(value)) fail('request', '需要 JSON 对象')
-  if (typeof value.model !== 'string' || !value.model.trim()) fail('model', '需要非空模型名称')
-  if (!isDescription(value.state)) fail('state', '需要文本、对象或数组')
+  if (!isRecord(value)) fail('request', 'object')
+  if (typeof value.model !== 'string' || !value.model.trim()) fail('model', 'model')
+  if (!isDescription(value.state)) fail('state', 'description')
   if (!isRecord(value.questions) || !Object.keys(value.questions).length)
-    fail('questions', '至少添加一个问题')
+    fail('questions', 'questions')
   for (const [id, q] of Object.entries(value.questions)) {
     const path = `questions.${id}`
-    if (!id.trim()) fail('questions', '问题 ID 不能为空')
-    if (!isRecord(q)) fail(path, '需要问题对象')
+    if (!id.trim()) fail('questions', 'questionId')
+    if (!isRecord(q)) fail(path, 'questionObject')
     if (
       !isDescription(q.instructions) ||
       (typeof q.instructions === 'string' && !q.instructions.trim())
     )
-      fail(`${path}.instructions`, '需要问题描述（文本、对象或数组）')
+      fail(`${path}.instructions`, 'instructions')
     if (q.type === 'noul') {
       if (q.criteria !== undefined) {
-        if (!isRecord(q.criteria)) fail(`${path}.criteria`, 'Noul 条件需要 true / false 对象')
+        if (!isRecord(q.criteria)) fail(`${path}.criteria`, 'noulCriteria')
         for (const [key, description] of Object.entries(q.criteria)) {
           if (!['true', 'false'].includes(key) || !isDescription(description))
-            fail(`${path}.criteria.${key}`, '仅接受 true / false 的文本、对象或数组描述')
+            fail(`${path}.criteria.${key}`, 'noulDescription')
         }
       }
     } else if (q.type === 'choice') {
-      if (!isRecord(q.criteria)) fail(`${path}.criteria`, 'Choice 条件需要选项映射')
+      if (!isRecord(q.criteria)) fail(`${path}.criteria`, 'choiceCriteria')
       const entries = Object.entries(q.criteria)
-      if (entries.length < 1 || entries.length > 255)
-        fail(`${path}.criteria`, 'Choice 需要 1–255 个选项')
+      if (entries.length < 1 || entries.length > 255) fail(`${path}.criteria`, 'choiceCount')
       for (const [key, description] of entries) {
         if (!key.trim() || !(description === null || isDescription(description)))
-          fail(`${path}.criteria.${key}`, '选项描述需要文本、对象、数组或 null')
+          fail(`${path}.criteria.${key}`, 'choiceDescription')
       }
     } else if (q.type === 'score') {
       if (
@@ -112,14 +110,14 @@ export function validateRequest(value: unknown): JevRequest {
         q.criteria.length > 10 ||
         !q.criteria.every(isDescription)
       )
-        fail(`${path}.criteria`, 'Score 需要 2–10 个有序等级（文本、对象或数组）')
-    } else fail(`${path}.type`, '需要 noul、choice 或 score')
+        fail(`${path}.criteria`, 'scoreCriteria')
+    } else fail(`${path}.type`, 'questionType')
     for (const key of Object.keys(q))
       if (!['type', 'instructions', 'criteria'].includes(key))
-        fail(`${path}.${key}`, '未知问题字段')
+        fail(`${path}.${key}`, 'questionField')
   }
   for (const key of Object.keys(value))
-    if (!['model', 'state', 'questions'].includes(key)) fail(key, '未知请求字段')
+    if (!['model', 'state', 'questions'].includes(key)) fail(key, 'requestField')
   return value as unknown as JevRequest
 }
 
@@ -171,11 +169,11 @@ Return only the JSON required by the response schema. Do not output explanations
 
 function exactKeys(value: Record<string, unknown>, keys: string[], path: string) {
   if (Object.keys(value).length !== keys.length || keys.some((key) => !Object.hasOwn(value, key)))
-    fail(path, '模型输出字段缺失或包含额外字段')
+    fail(path, 'outputFields')
 }
 function probability(value: unknown, path: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1)
-    fail(path, '概率必须是 0–1 之间的有限数值')
+    fail(path, 'probability')
   return value
 }
 
@@ -195,9 +193,9 @@ export function decodeResponse(
   try {
     parsed = JSON.parse(raw)
   } catch {
-    fail('response', '模型没有返回有效 JSON')
+    fail('response', 'outputJson')
   }
-  if (!isRecord(parsed)) fail('response', '模型输出必须是对象')
+  if (!isRecord(parsed)) fail('response', 'outputObject')
   const entries = Object.entries(request.questions)
   exactKeys(
     parsed,
@@ -207,20 +205,20 @@ export function decodeResponse(
   const answers = Object.fromEntries(
     entries.map(([id, q], index): [string, Answer] => {
       const value = parsed[`q${index}`]
-      if (!isRecord(value)) fail(id, '模型答案必须是对象')
+      if (!isRecord(value)) fail(id, 'answerObject')
       if (q.type === 'noul') {
         exactKeys(value, ['noul'], id)
         return [id, { type: 'noul', noul: probability(value.noul, id) }]
       }
       exactKeys(value, ['probabilities'], id)
-      if (!isRecord(value.probabilities)) fail(id, '缺少概率分布')
+      if (!isRecord(value.probabilities)) fail(id, 'distribution')
       const rawProbabilities = value.probabilities
       const keys =
         q.type === 'choice' ? Object.keys(q.criteria) : q.criteria.map((_, i) => String(i))
       exactKeys(rawProbabilities, keys, `${id}.probabilities`)
       const values = keys.map((key) => probability(rawProbabilities[key], `${id}.${key}`))
       const sum = values.reduce((a, b) => a + b, 0)
-      if (sum <= 0) fail(id, '概率分布总和为 0，无法归一化；请重新运行')
+      if (sum <= 0) fail(id, 'zeroDistribution')
       const normalized = values.map((p) => p / sum)
       const probabilities = Object.fromEntries(keys.map((key, i) => [key, normalized[i]!]))
       const confidence = distributionConfidence(normalized)

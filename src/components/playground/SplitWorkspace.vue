@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, shallowRef, useTemplateRef } from 'vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 const props = defineProps<{ layout: 'columns' | 'rows' }>()
 const split = shallowRef(50)
 const dragging = shallowRef(false)
@@ -39,7 +41,7 @@ function keyboardResize(event: KeyboardEvent) {
       v-if="layout === 'columns'"
       class="resizer"
       role="separator"
-      aria-label="调整输入和结果面板宽度"
+      :aria-label="t('actions.resize')"
       aria-orientation="vertical"
       :aria-valuenow="Math.round(split)"
       :aria-valuemin="40"

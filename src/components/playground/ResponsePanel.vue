@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, shallowRef } from 'vue'
+import { useI18n } from 'vue-i18n'
+import type { NoticeKey } from '../../i18n'
 import { Copy01Icon, Download01Icon } from '@hugeicons/core-free-icons'
 import { pretty } from '../../lib/contract'
 import type { Evaluation } from '../../lib/prompt-api'
@@ -11,12 +13,16 @@ import AnswerCard from './AnswerCard.vue'
 import TokenCount from './TokenCount.vue'
 const CodeEditor = defineAsyncComponent(() => import('./CodeEditor.vue'))
 const props = defineProps<{ evaluation: Evaluation | null; running: boolean; stale: boolean }>()
-const emit = defineEmits<{ notice: [text: string] }>()
+const emit = defineEmits<{ notice: [key: NoticeKey] }>()
+const { t } = useI18n()
 const view = shallowRef<'overview' | 'json'>('overview')
-const views = [
-  { value: 'overview', label: '概览' },
-  { value: 'json', label: 'JSON' },
-] as const
+const views = computed(
+  () =>
+    [
+      { value: 'overview', label: t('response.overview') },
+      { value: 'json', label: 'JSON' },
+    ] as const,
+)
 const jsonText = computed(() => (props.evaluation ? pretty(props.evaluation.response) : '{}'))
 const rows = computed(() =>
   Object.entries(props.evaluation?.request.questions ?? {}).map(([id, question]) => ({
@@ -28,9 +34,9 @@ const rows = computed(() =>
 async function copy() {
   try {
     await navigator.clipboard.writeText(jsonText.value)
-    emit('notice', '响应 JSON 已复制。')
+    emit('notice', 'copied')
   } catch {
-    emit('notice', '无法访问剪贴板，可以切换 JSON 视图手动复制。')
+    emit('notice', 'clipboard')
   }
 }
 function download() {
@@ -45,18 +51,18 @@ function download() {
 
 <template>
   <section class="response-panel" :aria-busy="running">
-    <PanelHeader title="Response">
+    <PanelHeader :title="t('response.title')">
       <template v-if="evaluation" #default>
-        <SegmentedControl v-model="view" label="结果视图" :options="views" />
+        <SegmentedControl v-model="view" :label="t('response.view')" :options="views" />
         <AppButton
-          label="复制响应 JSON"
+          :label="t('response.copy')"
           :icon="Copy01Icon"
           icon-only
           variant="quiet"
           @click="copy"
         />
         <AppButton
-          label="下载响应 JSON"
+          :label="t('response.download')"
           :icon="Download01Icon"
           icon-only
           variant="quiet"
@@ -64,11 +70,11 @@ function download() {
         />
       </template>
     </PanelHeader>
-    <StatusMessage v-if="running" busy>正在运行…</StatusMessage>
-    <StatusMessage v-else-if="stale" tone="warning">输入已修改，请重新运行。</StatusMessage>
+    <StatusMessage v-if="running" busy>{{ t('response.running') }}</StatusMessage>
+    <StatusMessage v-else-if="stale" tone="warning">{{ t('response.stale') }}</StatusMessage>
     <template v-if="evaluation">
       <div v-if="view === 'json'" class="response-json">
-        <CodeEditor :model-value="jsonText" label="响应 JSON" readonly />
+        <CodeEditor :model-value="jsonText" :label="t('response.json')" readonly />
       </div>
       <div v-else class="answers">
         <template v-for="row in rows" :key="`${evaluation.createdAt}-${row.id}`">
@@ -81,8 +87,11 @@ function download() {
         </template>
       </div>
       <footer class="response-foot">
-        <TokenCount label="输入" :count="evaluation.response.usage.input_tokens" />
-        <TokenCount label="输出" :count="evaluation.response.usage.output_tokens" />
+        <TokenCount :label="t('response.input')" :count="evaluation.response.usage.input_tokens" />
+        <TokenCount
+          :label="t('response.output')"
+          :count="evaluation.response.usage.output_tokens"
+        />
         <span class="elapsed">{{ (evaluation.elapsedMs / 1000).toFixed(2) }} s</span>
       </footer>
     </template>

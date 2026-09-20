@@ -1,7 +1,8 @@
 import { afterEach, expect, mock, test } from 'bun:test'
 import { createRenderer, nextTick } from 'vue'
 import { usePlayground } from '../src/composables/usePlayground'
-import { examples } from '../src/lib/examples'
+import { examples, getExamples, questionTemplate } from '../src/lib/examples'
+import { createAppI18n, readLocale } from '../src/i18n'
 import type { Availability, ModelFactory, ModelSession, PromptOptions } from '../src/lib/prompt-api'
 
 // Mount only the composable so Vue runs its real lifecycle without a browser or DOM shim.
@@ -82,6 +83,7 @@ function model(availability: Availability = 'downloadable') {
 
 async function mount(factory?: ModelFactory, secure = true, stored = new Map<string, string>()) {
   let playground!: ReturnType<typeof usePlayground>
+  const i18n = createAppI18n(readLocale({ getItem: (key) => stored.get(key) ?? null }))
   const app = renderer.createApp({
     setup() {
       playground = usePlayground({
@@ -97,11 +99,101 @@ async function mount(factory?: ModelFactory, secure = true, stored = new Map<str
       return () => null
     },
   })
+  app.use(i18n)
   app.mount({})
   cleanup.push(() => app.unmount())
   await nextTick()
-  return { playground, stored, app }
+  return { playground, stored, app, i18n }
 }
+
+test('switching interface locale preserves edited input, persisted draft, and completed result', async () => {
+  const m = model('available')
+  m.ready()
+  const { playground: p, stored, i18n } = await mount(m.factory)
+  expect(i18n.global.locale.value).toBe('en')
+  p.addQuestion('noul')
+  p.stateText.value = 'Keep my input exactly as written.'
+  await p.run()
+  await nextTick()
+  const result = p.evaluation.value
+  const state = p.stateText.value
+  const questions = p.questionsText.value
+  const draft = stored.get('browserjev.draft.v1')
+  const savedHistory = stored.get('browserjev.history.v1')
+  i18n.global.locale.value = 'zh-CN'
+  await nextTick()
+  expect(p.stateText.value).toBe(state)
+  expect(p.questionsText.value).toBe(questions)
+  expect(p.stateMode.value).toBe('text')
+  expect(p.evaluation.value).toBe(result)
+  expect(p.stale.value).toBe(false)
+  expect(stored.get('browserjev.draft.v1')).toBe(draft)
+  expect(stored.get('browserjev.history.v1')).toBe(savedHistory)
+  expect(m.bases).toHaveLength(1)
+  p.selectExample(getExamples(i18n.global.locale.value)[0]!)
+  expect(p.validation.value.request?.state).toEqual(getExamples('zh-CN')[0]!.request.state)
+  expect(JSON.parse(p.questionsText.value)).toEqual(getExamples('zh-CN')[0]!.request.questions)
+  const chineseDraft = p.stateText.value
+  i18n.global.locale.value = 'en'
+  await nextTick()
+  expect(p.stateText.value).toBe(chineseDraft)
+  p.selectExample(getExamples(i18n.global.locale.value)[0]!)
+  expect(p.validation.value.request?.state).toEqual(examples[0]!.request.state)
+})
+
+test('localized templates append in the selected language without translating existing questions', async () => {
+  const { playground: p, i18n } = await mount(model().factory)
+  p.addQuestion('noul')
+  const existing = JSON.parse(p.questionsText.value).noul_1
+  i18n.global.locale.value = 'zh-CN'
+  p.addQuestion('choice')
+  const questions = JSON.parse(p.questionsText.value)
+  expect(questions.noul_1).toEqual(existing)
+  expect(questions.choice_1).toEqual(questionTemplate('choice', 'zh-CN'))
+})
+
+test('validation and stored notices change language without changing invalid input', async () => {
+  const { playground: p, i18n } = await mount(model().factory)
+  p.questionsText.value = '{ invalid'
+  const englishValidation = p.validation.value.error
+  p.addQuestion('noul')
+  const englishError = p.error.value
+  p.notice.value = 'copied'
+  expect(p.noticeText.value).toBe('Response JSON copied.')
+  i18n.global.locale.value = 'zh-CN'
+  await nextTick()
+  expect(p.questionsText.value).toBe('{ invalid')
+  expect(p.validation.value.error).not.toBe(englishValidation)
+  expect(p.error.value).not.toBe(englishError)
+  expect(p.noticeText.value).toBe('响应 JSON 已复制。')
+})
+
+test('Text submits literal strings while JSON parses structured state and rejects invalid roots', async () => {
+  const { playground: p } = await mount(model().factory)
+  p.addQuestion('noul')
+  p.stateText.value = '{"amount":42}'
+  expect(p.validation.value.request?.state).toBe('{"amount":42}')
+  p.setStateMode('json')
+  expect(JSON.parse(p.stateText.value)).toBe('{"amount":42}')
+  expect(p.validation.value.request?.state).toBe('{"amount":42}')
+  p.stateText.value = '{"amount":42}'
+  expect(p.validation.value.request?.state).toEqual({ amount: 42 })
+  p.stateText.value = '["first", {"amount":42}]'
+  expect(p.validation.value.request?.state).toEqual(['first', { amount: 42 }])
+  p.stateText.value = '"line 1\\nline 2"'
+  p.setStateMode('text')
+  expect(p.stateText.value).toBe('line 1\nline 2')
+  p.setStateMode('json')
+  expect(p.validation.value.request?.state).toBe('line 1\nline 2')
+  for (const value of ['null', 'true', '42', '{bad']) {
+    p.stateText.value = value
+    expect(p.canRun.value).toBe(false)
+    expect(p.validation.value.request).toBeNull()
+  }
+  p.setStateMode('text')
+  expect(p.stateMode.value).toBe('json')
+  expect(p.stateText.value).toBe('{bad')
+})
 
 test('empty draft offers examples; selecting or editing inputs hides them, clearing restores them', async () => {
   const { playground: p } = await mount(model().factory)

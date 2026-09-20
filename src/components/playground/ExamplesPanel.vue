@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { HugeiconsIcon } from '@hugeicons/vue'
 import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
-import { examples, type Example } from '../../lib/examples'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { getExamples, type Example } from '../../lib/examples'
 import PanelHeader from '../ui/PanelHeader.vue'
 defineProps<{ disabled: boolean }>()
 const emit = defineEmits<{ select: [example: Example] }>()
+const { locale, t } = useI18n()
+const examples = computed(() => getExamples(locale.value))
 </script>
 
 <template>
-  <section class="examples-panel" aria-label="示例">
-    <PanelHeader title="示例" />
+  <section class="examples-panel" :aria-label="t('examples.title')">
+    <PanelHeader :title="t('examples.title')" />
     <div class="examples">
       <button
         v-for="example in examples"
@@ -36,7 +40,6 @@ const emit = defineEmits<{ select: [example: Example] }>()
   min-height: 0;
 }
 .examples {
-  padding: 0 20px;
   overflow: auto;
 }
 .example {
@@ -45,7 +48,7 @@ const emit = defineEmits<{ select: [example: Example] }>()
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 24px 0;
+  padding: 24px 20px;
   border: 0;
   border-bottom: 1px solid var(--border);
   background: transparent;
@@ -56,7 +59,8 @@ const emit = defineEmits<{ select: [example: Example] }>()
 .example:last-child {
   border-bottom: 0;
 }
-.example:hover:not(:disabled) {
+.example:hover:not(:disabled),
+.example:focus-visible {
   background: var(--surface-hover);
 }
 .example > span {

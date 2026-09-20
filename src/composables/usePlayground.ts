@@ -1,4 +1,7 @@
 import { computed, onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { localizedError, type NoticeKey } from '../i18n'
+import { AppError } from '../lib/errors'
 import {
   isRecord,
   LOCAL_MODEL,
@@ -10,7 +13,6 @@ import {
 import { restoreHistory } from '../lib/history'
 import { questionTemplate, type Example } from '../lib/examples'
 import {
-  errorMessage,
   getModelFactory,
   PromptEngine,
   type Availability,
@@ -27,13 +29,14 @@ interface Environment {
 }
 
 export function usePlayground(environment: Partial<Environment> = {}) {
+  const { t, locale } = useI18n()
   const getFactory = environment.getFactory ?? getModelFactory
   const isSecureContext = environment.isSecureContext ?? (() => window.isSecureContext)
   const storage = environment.storage ?? {
     getItem: (key: string) => localStorage.getItem(key),
     setItem: (key: string, value: string) => localStorage.setItem(key, value),
   }
-  const title = shallowRef('自定义请求')
+  const title = shallowRef(t('request.custom'))
   const stateText = shallowRef('')
   const stateMode = shallowRef<'text' | 'json'>('text')
   const questionsText = shallowRef('{}')
@@ -41,8 +44,15 @@ export function usePlayground(environment: Partial<Environment> = {}) {
   const availability = shallowRef<Availability | 'unsupported' | 'checking'>('checking')
   const phase = shallowRef<'idle' | 'initializing' | 'ready' | 'running'>('idle')
   const progress = shallowRef<number | null>(null)
-  const error = shallowRef('')
-  const notice = shallowRef('')
+  const errorSource = shallowRef<unknown>('')
+  const error = computed({
+    get: () => localizedError(errorSource.value, t),
+    set: (value: string) => {
+      errorSource.value = value
+    },
+  })
+  const notice = shallowRef<NoticeKey | ''>('')
+  const noticeText = computed(() => (notice.value ? t(`notices.${notice.value}`) : ''))
   const evaluation = shallowRef<Evaluation | null>(null)
   const history = shallowRef<Evaluation[]>([])
   let engine: PromptEngine | undefined
@@ -75,22 +85,22 @@ export function usePlayground(environment: Partial<Environment> = {}) {
       if (stateMode.value === 'json') {
         try {
           state = JSON.parse(stateText.value)
-        } catch (error) {
-          throw new Error(`State JSON: ${errorMessage(error)}`)
+        } catch {
+          throw new AppError('stateJson')
         }
       }
       let questions: unknown
       try {
         questions = JSON.parse(questionsText.value.trim() || '{}')
-      } catch (error) {
-        throw new Error(`Questions JSON: ${errorMessage(error)}`)
+      } catch {
+        throw new AppError('questionsJson')
       }
       return {
         request: validateRequest({ model: requestedModel.value, state, questions }),
         error: '',
       }
     } catch (e) {
-      return { request: null, error: errorMessage(e) }
+      return { request: null, error: localizedError(e, t) }
     }
   })
   const stale = computed(
@@ -115,7 +125,7 @@ export function usePlayground(environment: Partial<Environment> = {}) {
     } catch (e) {
       if (version === capabilityVersion && !disposed) {
         availability.value = 'unavailable'
-        error.value = errorMessage(e)
+        errorSource.value = e
       }
     }
   }
@@ -156,12 +166,12 @@ export function usePlayground(environment: Partial<Environment> = {}) {
       try {
         storage.setItem(HISTORY_KEY, JSON.stringify(history.value))
       } catch {
-        notice.value = '浏览器存储已满，本次历史仅保留在当前页面。'
+        notice.value = 'storageFull'
       }
     } catch (e) {
       if (!disposed) {
-        if (controller?.signal.aborted) notice.value = '已取消'
-        else error.value = errorMessage(e)
+        if (controller?.signal.aborted) notice.value = 'cancelled'
+        else errorSource.value = e
       }
     } finally {
       if (!disposed) phase.value = ready ? 'ready' : 'idle'
@@ -171,7 +181,7 @@ export function usePlayground(environment: Partial<Environment> = {}) {
   function cancel() {
     controller?.abort()
   }
-  function applyRequest(request: JevRequest, name = '自定义请求') {
+  function applyRequest(request: JevRequest, name = t('request.custom')) {
     if (busy.value) return
     title.value = name
     requestedModel.value = request.model
@@ -185,7 +195,7 @@ export function usePlayground(environment: Partial<Environment> = {}) {
   }
   function loadHistory(item: Evaluation) {
     if (!busy.value) {
-      applyRequest(item.request, '历史请求')
+      applyRequest(item.request, t('request.history'))
       evaluation.value = item
     }
   }
@@ -193,18 +203,21 @@ export function usePlayground(environment: Partial<Environment> = {}) {
     if (busy.value) return
     try {
       const q = JSON.parse(questionsText.value.trim() || '{}')
-      if (!isRecord(q)) throw new Error('Questions 必须是对象')
+      if (!isRecord(q)) throw new AppError('questionObject')
       const base = validateRequest({
         model: LOCAL_MODEL,
         state: '',
-        questions: Object.keys(q).length ? q : { temp: questionTemplate('noul') },
+        questions: Object.keys(q).length ? q : { temp: questionTemplate('noul', locale.value) },
       })
       const questions = Object.keys(q).length ? base.questions : {}
       let n = 1
       while (Object.hasOwn(questions, `${type}_${n}`)) n++
-      questionsText.value = pretty({ ...questions, [`${type}_${n}`]: questionTemplate(type) })
+      questionsText.value = pretty({
+        ...questions,
+        [`${type}_${n}`]: questionTemplate(type, locale.value),
+      })
     } catch {
-      error.value = '请先修正 Questions JSON，再添加问题。'
+      errorSource.value = new AppError('addQuestion')
     }
   }
   function setStateMode(mode: 'text' | 'json') {
@@ -216,7 +229,7 @@ export function usePlayground(environment: Partial<Environment> = {}) {
         const value = JSON.parse(stateText.value)
         stateText.value = typeof value === 'string' ? value : pretty(value)
       } catch {
-        error.value = '请先修正 State JSON，再切换格式。'
+        errorSource.value = new AppError('stateMode')
         return
       }
     }
@@ -227,12 +240,12 @@ export function usePlayground(environment: Partial<Environment> = {}) {
     try {
       questionsText.value = pretty(JSON.parse(questionsText.value.trim() || '{}'))
     } catch {
-      error.value = 'Questions JSON 格式有误，无法格式化。'
+      errorSource.value = new AppError('formatQuestions')
     }
   }
   function clear() {
     if (busy.value) return
-    title.value = '自定义请求'
+    title.value = t('request.custom')
     stateText.value = ''
     stateMode.value = 'text'
     questionsText.value = '{}'
@@ -252,7 +265,7 @@ export function usePlayground(environment: Partial<Environment> = {}) {
         }),
       )
     } catch {
-      notice.value = '无法保存草稿；当前编辑仍然可用。'
+      notice.value = 'draft'
     }
   })
   onMounted(() => {
@@ -273,7 +286,7 @@ export function usePlayground(environment: Partial<Environment> = {}) {
       const saved: unknown = JSON.parse(storage.getItem(HISTORY_KEY) ?? '[]')
       history.value = restoreHistory(saved)
     } catch {
-      notice.value = '无法读取保存的草稿或历史'
+      notice.value = 'restore'
     }
     void checkAvailability()
   })
@@ -292,6 +305,7 @@ export function usePlayground(environment: Partial<Environment> = {}) {
     progress,
     error,
     notice,
+    noticeText,
     evaluation,
     history,
     busy,

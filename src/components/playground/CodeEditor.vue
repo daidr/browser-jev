@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { EditorState, Compartment } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import { json } from '@codemirror/lang-json'
-import { editorSetup } from '../../lib/editor-setup'
+import { createEditorSetup } from '../../lib/editor-setup'
+import { editorPhrases } from '../../i18n/editor'
+
+const { locale } = useI18n()
 
 const model = defineModel<string>({ required: true })
 const props = withDefaults(
@@ -13,6 +17,14 @@ const props = withDefaults(
 const host = useTemplateRef<HTMLDivElement>('host')
 const language = new Compartment()
 const editable = new Compartment()
+const localization = new Compartment()
+const attributes = new Compartment()
+const editorAttributes = () =>
+  EditorView.contentAttributes.of({
+    'aria-label': props.label,
+    'aria-multiline': 'true',
+    role: 'textbox',
+  })
 let view: EditorView | undefined
 onMounted(() => {
   view = new EditorView({
@@ -20,18 +32,15 @@ onMounted(() => {
     state: EditorState.create({
       doc: model.value,
       extensions: [
-        editorSetup,
+        createEditorSetup((key) => editorPhrases(locale.value)[key] ?? key),
+        localization.of(EditorState.phrases.of(editorPhrases(locale.value))),
         EditorView.lineWrapping,
         language.of(props.jsonMode ? json() : []),
         editable.of([
           EditorState.readOnly.of(props.readonly),
           EditorView.editable.of(!props.readonly),
         ]),
-        EditorView.contentAttributes.of({
-          'aria-label': props.label,
-          'aria-multiline': 'true',
-          role: 'textbox',
-        }),
+        attributes.of(editorAttributes()),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) model.value = update.state.doc.toString()
         }),
@@ -48,8 +57,12 @@ onMounted(() => {
             padding: '0 4px 0 8px',
           },
           '.cm-activeLineGutter, .cm-activeLine': { backgroundColor: 'transparent' },
-          '&.cm-focused .cm-activeLine': { backgroundColor: '#f3f6fc' },
-          '.cm-selectionBackground': { backgroundColor: '#dde6ff !important' },
+          // The active line sits above drawSelection's layer; keep it translucent.
+          '&.cm-focused .cm-activeLine': { backgroundColor: '#315be808' },
+          '.cm-selectionBackground': { backgroundColor: '#dce5f5' },
+          '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
+            backgroundColor: '#bdd0ff',
+          },
           '.cm-foldGutter': { width: '24px' },
           '.cm-foldGutter .cm-gutterElement': {
             display: 'flex',
@@ -87,6 +100,14 @@ onMounted(() => {
 watch(model, (value) => {
   if (view && value !== view.state.doc.toString())
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value } })
+})
+watch([locale, () => props.label], () => {
+  view?.dispatch({
+    effects: [
+      localization.reconfigure(EditorState.phrases.of(editorPhrases(locale.value))),
+      attributes.reconfigure(editorAttributes()),
+    ],
+  })
 })
 watch(
   () => props.jsonMode,

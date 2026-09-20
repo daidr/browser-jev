@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, shallowRef } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   Layout2ColumnIcon,
   Layout2RowIcon,
@@ -16,6 +17,9 @@ import RequestEditor from './RequestEditor.vue'
 import ResponsePanel from './ResponsePanel.vue'
 import ExamplesPanel from './ExamplesPanel.vue'
 import ModelDownloadDialog from './ModelDownloadDialog.vue'
+import LocaleSelect from './LocaleSelect.vue'
+
+const { t, locale } = useI18n()
 
 const {
   stateText,
@@ -26,6 +30,7 @@ const {
   progress,
   error,
   notice,
+  noticeText,
   evaluation,
   history,
   busy,
@@ -44,15 +49,17 @@ const {
   clear,
 } = usePlayground()
 const layout = shallowRef<'columns' | 'rows'>('columns')
-const layoutOptions = [
-  { value: 'columns', label: '左右布局', icon: Layout2ColumnIcon },
-  { value: 'rows', label: '上下布局', icon: Layout2RowIcon },
-] as const
+const layoutOptions = computed(
+  () =>
+    [
+      { value: 'columns', label: t('actions.columns'), icon: Layout2ColumnIcon },
+      { value: 'rows', label: t('actions.rows'), icon: Layout2RowIcon },
+    ] as const,
+)
 const availabilityMessage = computed(() => {
-  if (availability.value === 'checking') return '正在检查浏览器支持…'
-  if (availability.value === 'unsupported')
-    return '当前浏览器不支持 Prompt API。需要使用桌面版 Chrome 148 或更高版本。'
-  return '当前设备无法使用本地模型。需要使用桌面版 Chrome 148 或更高版本。'
+  if (availability.value === 'checking') return t('availability.checking')
+  if (availability.value === 'unsupported') return t('availability.unsupported')
+  return t('availability.unavailable')
 })
 function shortcut(event: KeyboardEvent) {
   if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
@@ -75,28 +82,30 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   <div class="app-shell">
     <header class="topbar">
       <h1>BrowserJev</h1>
-      <div v-if="supported" class="toolbar-actions">
+      <div class="toolbar-actions">
         <select
-          v-if="history.length"
+          v-if="supported && history.length"
           class="control-select history-select"
-          aria-label="历史记录"
+          :aria-label="t('actions.history')"
           :disabled="busy"
           value=""
           @change="selectHistory"
         >
-          <option disabled value="">历史记录</option>
+          <option disabled value="">{{ t('actions.history') }}</option>
           <option v-for="(item, index) in history" :key="item.createdAt" :value="index">
-            {{ new Date(item.createdAt).toLocaleString() }} ·
+            {{ new Date(item.createdAt).toLocaleString(locale) }} ·
             {{ Object.keys(item.request.questions).join(', ') }}
           </option>
         </select>
         <SegmentedControl
+          v-if="supported"
           v-model="layout"
           class="layout-switch"
-          label="面板布局"
+          :label="t('actions.layout')"
           :options="layoutOptions"
           icon-only
         />
+        <LocaleSelect />
       </div>
     </header>
     <main class="main">
@@ -125,7 +134,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
           />
           <footer class="run-bar">
             <AppButton
-              label="清空"
+              :label="t('actions.clear')"
               :icon="Delete01Icon"
               variant="quiet"
               :disabled="busy || inputEmpty"
@@ -133,14 +142,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
             />
             <AppButton
               v-if="phase === 'running'"
-              label="停止运行"
+              :label="t('actions.stop')"
               :icon="StopIcon"
               variant="primary"
               @click="cancel"
             />
             <AppButton
               v-else
-              label="运行"
+              :label="t('actions.run')"
               :icon="PlayIcon"
               variant="primary"
               :disabled="!canRun"
@@ -162,7 +171,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
       </SplitWorkspace>
     </main>
     <StatusMessage v-if="notice" class="toast" dismissible @dismiss="notice = ''">{{
-      notice
+      noticeText
     }}</StatusMessage>
     <ModelDownloadDialog
       :open="phase === 'initializing'"

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Cancel01Icon } from '@hugeicons/core-free-icons'
 import AppButton from './AppButton.vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 withDefaults(
   defineProps<{ tone?: 'neutral' | 'error' | 'warning'; busy?: boolean; dismissible?: boolean }>(),
   { tone: 'neutral' },
@@ -15,7 +17,7 @@ const emit = defineEmits<{ dismiss: [] }>()
     <AppButton
       v-if="dismissible"
       :icon="Cancel01Icon"
-      label="关闭提示"
+      :label="t('actions.dismiss')"
       variant="quiet"
       icon-only
       @click="emit('dismiss')"

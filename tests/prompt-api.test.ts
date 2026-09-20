@@ -65,7 +65,7 @@ test('rejects overflowing input before inference and releases session', async ()
   const engine = new PromptEngine(factory(base))
   const signal = new AbortController().signal
   await engine.initialize(signal, () => {})
-  await expect(engine.evaluate(request, signal)).rejects.toThrow('超过')
+  await expect(engine.evaluate(request, signal)).rejects.toMatchObject({ code: 'contextLimit' })
   expect(base.children[0]!.calls).toHaveLength(0)
   expect(base.children[0]!.destroyed).toBe(true)
 })

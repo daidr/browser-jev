@@ -1,4 +1,5 @@
 import type { JevRequest, Question } from './contract'
+import { chineseExamples } from './examples.zh-CN'
 
 export interface Example {
   id: string
@@ -10,8 +11,8 @@ export interface Example {
 export const examples: Example[] = [
   {
     id: 'support',
-    title: '客服工单分流',
-    description: '一次请求，完成分类、判断和评分',
+    title: 'Route support tickets',
+    description: 'Classify, decide, and score in one request',
     type: 'mixed',
     request: {
       model: 'jev-latest',
@@ -49,8 +50,8 @@ export const examples: Example[] = [
   },
   {
     id: 'sandwich',
-    title: '这算三明治吗？',
-    description: '用明确条件判断一个命题',
+    title: 'Is it a sandwich?',
+    description: 'Evaluate a proposition with explicit criteria',
     type: 'noul',
     request: {
       model: 'jev-latest',
@@ -72,8 +73,8 @@ export const examples: Example[] = [
   },
   {
     id: 'intent',
-    title: '识别用户意图',
-    description: '从动态选项中选择下一步',
+    title: 'Identify user intent',
+    description: 'Choose the next action from dynamic options',
     type: 'choice',
     request: {
       model: 'jev-latest',
@@ -94,8 +95,8 @@ export const examples: Example[] = [
   },
   {
     id: 'severity',
-    title: '缺陷严重程度',
-    description: '按有序标准评估影响',
+    title: 'Assess bug severity',
+    description: 'Rate impact against ordered criteria',
     type: 'score',
     request: {
       model: 'jev-latest',
@@ -116,8 +117,8 @@ export const examples: Example[] = [
   },
   {
     id: 'guardrails',
-    title: '内容与指令检查',
-    description: '把输入内容和控制指令区分开',
+    title: 'Check content and instructions',
+    description: 'Distinguish user content from control instructions',
     type: 'mixed',
     request: {
       model: 'jev-latest',
@@ -142,7 +143,25 @@ export const examples: Example[] = [
   },
 ]
 
-export function questionTemplate(type: Question['type']): Question {
+export function getExamples(locale: string): Example[] {
+  return locale === 'zh-CN' ? chineseExamples : examples
+}
+
+export function questionTemplate(type: Question['type'], locale = 'en'): Question {
+  if (locale === 'zh-CN') {
+    if (type === 'noul') return { type, instructions: '上下文是否支持这个命题？' }
+    if (type === 'choice')
+      return {
+        type,
+        instructions: '哪个选项最符合上下文？',
+        criteria: { option_a: '描述第一个选项', option_b: '描述第二个选项' },
+      }
+    return {
+      type,
+      instructions: '上下文在多大程度上符合条件？',
+      criteria: ['不符合条件', '部分符合条件', '完全符合条件'],
+    }
+  }
   if (type === 'noul') return { type, instructions: 'Is the statement supported by the state?' }
   if (type === 'choice')
     return {

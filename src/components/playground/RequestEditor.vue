@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { TextWrapIcon } from '@hugeicons/core-free-icons'
-import { defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Question } from '../../lib/contract'
 import AppButton from '../ui/AppButton.vue'
 import PanelHeader from '../ui/PanelHeader.vue'
 import SegmentedControl from '../ui/SegmentedControl.vue'
 import StatusMessage from '../ui/StatusMessage.vue'
 const CodeEditor = defineAsyncComponent(() => import('./CodeEditor.vue'))
+const { t } = useI18n()
 
 const state = defineModel<string>('state', { required: true })
 const questions = defineModel<string>('questions', { required: true })
@@ -16,10 +18,13 @@ const emit = defineEmits<{
   add: [type: Question['type']]
   format: []
 }>()
-const stateModes = [
-  { value: 'text', label: '文本' },
-  { value: 'json', label: 'JSON' },
-] as const
+const stateModes = computed(
+  () =>
+    [
+      { value: 'text', label: t('editor.text'), title: t('editor.textHint') },
+      { value: 'json', label: t('editor.json'), title: t('editor.jsonHint') },
+    ] as const,
+)
 function addQuestion(event: Event) {
   const select = event.target as HTMLSelectElement
   const type = select.value
@@ -31,10 +36,10 @@ function addQuestion(event: Event) {
 <template>
   <div class="request-editor">
     <section class="state-section">
-      <PanelHeader title="State">
+      <PanelHeader :title="t('editor.state')">
         <SegmentedControl
           :model-value="stateMode"
-          label="State 格式"
+          :label="t('editor.format')"
           :options="stateModes"
           :disabled="disabled"
           @update:model-value="emit('mode', $event)"
@@ -43,28 +48,28 @@ function addQuestion(event: Event) {
       <div class="state-code">
         <CodeEditor
           v-model="state"
-          label="State 编辑器"
+          :label="t('editor.stateLabel')"
           :json-mode="stateMode === 'json'"
           :readonly="disabled"
         />
       </div>
     </section>
     <section class="questions-section">
-      <PanelHeader title="Questions">
+      <PanelHeader :title="t('editor.questions')">
         <select
           class="control-select"
-          aria-label="添加问题"
+          :aria-label="t('editor.addQuestion')"
           value=""
           :disabled="disabled"
           @change="addQuestion"
         >
-          <option disabled value="">添加问题</option>
+          <option disabled value="">{{ t('editor.addQuestion') }}</option>
           <option value="noul">Noul</option>
           <option value="choice">Choice</option>
           <option value="score">Score</option>
         </select>
         <AppButton
-          label="格式化 Questions JSON"
+          :label="t('editor.formatQuestions')"
           :icon="TextWrapIcon"
           icon-only
           variant="quiet"
@@ -73,7 +78,7 @@ function addQuestion(event: Event) {
         />
       </PanelHeader>
       <div class="questions-code">
-        <CodeEditor v-model="questions" label="Questions 编辑器" :readonly="disabled" />
+        <CodeEditor v-model="questions" :label="t('editor.questionsLabel')" :readonly="disabled" />
       </div>
       <StatusMessage v-if="validationError" class="validation" tone="error">{{
         validationError

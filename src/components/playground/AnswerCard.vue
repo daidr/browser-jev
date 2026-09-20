@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { HugeiconsIcon } from '@hugeicons/vue'
 import { ArrowDown01Icon } from '@hugeicons/core-free-icons'
 import { describe, type Answer, type Question } from '../../lib/contract'
 import ProbabilityDistribution from './ProbabilityDistribution.vue'
 const props = defineProps<{ id: string; question: Question; answer: Answer }>()
+const { t } = useI18n()
 const items = computed(() => {
   const { answer, question } = props
   if (answer.type === 'noul')
     return [
-      { key: 'true', label: 'True', value: answer.noul },
-      { key: 'false', label: 'False', value: 1 - answer.noul },
+      { key: 'true', label: t('response.true'), value: answer.noul },
+      { key: 'false', label: t('response.false'), value: 1 - answer.noul },
     ]
   return Object.entries(answer.probabilities).map(([key, value]) => ({
     key,
@@ -40,7 +42,9 @@ const items = computed(() => {
           >{{ answer.score.toFixed(2) }}
           <span class="score-range">/ {{ Object.keys(answer.legend).length - 1 }}</span></strong
         >
-        <span class="confidence">Confidence {{ (answer.confidence * 100).toFixed(1) }}%</span>
+        <span class="confidence"
+          >{{ t('response.confidence') }} {{ (answer.confidence * 100).toFixed(1) }}%</span
+        >
       </div>
       <ProbabilityDistribution :items="items" />
     </div>

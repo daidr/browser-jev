@@ -4,7 +4,7 @@ import type { Add01Icon } from '@hugeicons/core-free-icons'
 const model = defineModel<T>({ required: true })
 defineProps<{
   label: string
-  options: readonly { value: T; label: string; icon?: typeof Add01Icon }[]
+  options: readonly { value: T; label: string; title?: string; icon?: typeof Add01Icon }[]
   iconOnly?: boolean
   disabled?: boolean
 }>()
@@ -19,7 +19,7 @@ defineProps<{
       :disabled="disabled"
       :aria-pressed="model === option.value"
       :aria-label="option.label"
-      :title="iconOnly ? option.label : undefined"
+      :title="option.title ?? (iconOnly ? option.label : undefined)"
       :class="{ 'icon-only': iconOnly }"
       @click="model = option.value"
     >

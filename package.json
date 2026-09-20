@@ -22,7 +22,8 @@
     "@codemirror/view": "^6.38.0",
     "@hugeicons/core-free-icons": "^4.3.4",
     "@hugeicons/vue": "^1.0.8",
-    "vue": "^3.5.0"
+    "vue": "^3.5.0",
+    "vue-i18n": "11"
   },
   "devDependencies": {
     "@types/bun": "latest",

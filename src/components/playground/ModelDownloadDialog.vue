@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { computed, useTemplateRef, watch } from 'vue'
 import AppButton from '../ui/AppButton.vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 const props = defineProps<{ open: boolean; progress: number | null; downloading: boolean }>()
 const emit = defineEmits<{ cancel: [] }>()
 const dialog = useTemplateRef<HTMLDialogElement>('dialog')
 const heading = computed(() =>
-  props.progress === 1 ? '正在加载模型' : props.downloading ? '正在下载模型' : '正在准备模型',
+  props.progress === 1
+    ? t('download.loading')
+    : props.downloading
+      ? t('download.downloading')
+      : t('download.preparing'),
 )
 watch(
   [() => props.open, dialog],
@@ -27,11 +33,11 @@ watch(
   >
     <h2 id="download-heading">{{ heading }}</h2>
     <div class="progress-label" role="status">
-      <span>{{ progress === 1 ? '等待模型就绪…' : '准备完成后将自动运行' }}</span>
+      <span>{{ progress === 1 ? t('download.waiting') : t('download.autoRun') }}</span>
       <span v-if="progress !== null">{{ Math.floor(progress * 100) }}%</span>
     </div>
     <progress :value="progress ?? undefined" max="1" :aria-label="heading" />
-    <footer><AppButton label="取消" autofocus @click="emit('cancel')" /></footer>
+    <footer><AppButton :label="t('actions.cancel')" autofocus @click="emit('cancel')" /></footer>
   </dialog>
 </template>
 

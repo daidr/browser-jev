@@ -61,7 +61,7 @@ function foldButton(icon: typeof ArrowDown01Icon, label: string): HTMLButtonElem
 
 // CodeMirror basicSetup, with its default character-based fold gutter replaced.
 // Based on codemirror 6.0.2; see THIRD_PARTY_NOTICES.md for the upstream MIT license.
-export const editorSetup = [
+export const createEditorSetup = (phrase: (key: string) => string) => [
   lineNumbers(),
   highlightActiveLineGutter(),
   highlightSpecialChars(),
@@ -70,7 +70,7 @@ export const editorSetup = [
     markerDOM(open) {
       const button = foldButton(
         open ? ArrowDown01Icon : ArrowRight01Icon,
-        open ? '折叠代码' : '展开代码',
+        phrase(open ? 'Fold line' : 'Unfold line'),
       )
       // CodeMirror gutters are aria-hidden; keyboard users retain the fold keymap below.
       button.tabIndex = -1
@@ -79,7 +79,7 @@ export const editorSetup = [
   }),
   codeFolding({
     placeholderDOM(view, onclick) {
-      const button = foldButton(MoreHorizontalIcon, '展开代码')
+      const button = foldButton(MoreHorizontalIcon, view.state.phrase('Unfold line'))
       button.classList.add('cm-foldPlaceholder')
       button.onclick = (event) => {
         onclick(event)
