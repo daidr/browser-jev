@@ -93,7 +93,7 @@ describe('Jev request compatibility', () => {
 describe('answer invariants', () => {
   const raw = {
     q0: { billing: 0.8, technical: 0.1, account: 0.1 },
-    q1: 0.95,
+    q1: { answer: true, confidence: 0.95 },
     q2: { '0': 0.1, '1': 0.6, '2': 0.3 },
   }
   test('computes choice and weighted score from complete distributions', () => {
@@ -108,6 +108,38 @@ describe('answer invariants', () => {
     })
     expect(output.usage).toEqual({ input_tokens: 521 })
     expect(output.usage).not.toHaveProperty('output_tokens')
+  })
+  test('uses the explicit Noul decision to map confidence to the probability of true', () => {
+    for (const answer of [true, false]) {
+      for (const confidence of [0.5, 0.8, 0.95, 1]) {
+        const output = decodeResponse(
+          request,
+          JSON.stringify({ ...raw, q1: { answer, confidence } }),
+        )
+        expect(output.answers.needs_human).toMatchObject({ type: 'noul' })
+        expect((output.answers.needs_human as { noul: number }).noul).toBeCloseTo(
+          answer ? confidence : 1 - confidence,
+        )
+      }
+    }
+  })
+  test('requires a boolean decision and valid confidence without coercion or legacy fallback', () => {
+    for (const q1 of [
+      0.95,
+      true,
+      { answer: 'false', confidence: 0.95 },
+      { answer: 0, confidence: 0.95 },
+      { answer: null, confidence: 0.95 },
+      { answer: false },
+      { confidence: 0.95 },
+      { answer: false, confidence: '0.95' },
+      { answer: false, confidence: null },
+      { answer: false, confidence: -0.1 },
+      { answer: true, confidence: 0.49 },
+      { answer: false, confidence: 1.01 },
+      { answer: false, confidence: 0.95, noul: 0.05 },
+    ])
+      expect(() => decodeResponse(request, JSON.stringify({ ...raw, q1 }))).toThrow()
   })
   test('normalizes positive estimates without inventing missing values', () => {
     const output = decodeResponse(

@@ -1,7 +1,12 @@
 // Run in Chrome on the Vite origin:
 // await (await import('/benchmarks/prompt-api.js')).benchmark()
 // Uses real model sessions; does not read or write playground draft/history.
-import { createPlan, decodeResponse, SYSTEM_PROMPT } from '../src/lib/contract.ts'
+import {
+  createPlan,
+  CURRENT_RESPONSE_FORMAT,
+  decodeResponse,
+  SYSTEM_PROMPT,
+} from '../src/lib/contract.ts'
 import { getExamples } from '../src/lib/examples.ts'
 
 // Frozen inference instructions and schema from 73a4c23, before output compaction.
@@ -115,7 +120,7 @@ export async function benchmark({
                 request,
                 raw,
                 { input_tokens: inputTokens },
-                name === 'baseline' ? 'nested' : 'compact',
+                name === 'baseline' ? 'nested' : CURRENT_RESPONSE_FORMAT,
               )
               const end = performance.now()
               runs.push({

@@ -85,6 +85,8 @@ export default {
     requestField: '未知请求字段。',
     outputFields: '模型输出字段缺失或包含额外字段。',
     probability: '概率必须是 0–1 之间的有限数值。',
+    booleanAnswer: 'Noul 答案必须是布尔值（true 或 false）。',
+    binaryConfidence: 'Noul 所选答案的置信率必须在 0.5–1 之间。',
     outputJson: '模型没有返回有效 JSON。',
     outputObject: '模型输出必须是对象。',
     answerObject: '模型答案必须是对象。',

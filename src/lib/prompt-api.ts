@@ -1,6 +1,7 @@
 import { AppError, errorMessages } from './errors'
 import {
   createPlan,
+  CURRENT_RESPONSE_FORMAT,
   decodeResponse,
   SYSTEM_PROMPT,
   type JevRequest,
@@ -102,7 +103,7 @@ export class PromptEngine {
         request,
         response,
         raw,
-        responseFormat: 'compact',
+        responseFormat: CURRENT_RESPONSE_FORMAT,
         elapsedMs: performance.now() - start,
         contextUsage: session.contextUsage,
         contextWindow: session.contextWindow,

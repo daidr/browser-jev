@@ -20,6 +20,8 @@ export const errorMessages = {
   requestField: 'Unknown request field.',
   outputFields: 'The model output has missing or unexpected fields.',
   probability: 'Probabilities must be finite numbers between 0 and 1.',
+  booleanAnswer: 'The Noul answer must be a boolean (true or false).',
+  binaryConfidence: 'Confidence in the chosen Noul answer must be between 0.5 and 1.',
   outputJson: 'The model did not return valid JSON.',
   outputObject: 'The model output must be an object.',
   answerObject: 'The model answer must be an object.',

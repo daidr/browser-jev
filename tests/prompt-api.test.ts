@@ -18,7 +18,7 @@ class Session extends EventTarget implements ModelSession {
   destroyed = false
   children: Session[] = []
   calls: { input: string; options: PromptOptions }[] = []
-  result = '{"q0":0.8}'
+  result = '{"q0":{"answer":true,"confidence":0.8}}'
   overflow = false
   async measureContextUsage() {
     return 80
@@ -56,7 +56,9 @@ test('every evaluation clones a clean base and destroys only its child', async (
   expect(base.children.every((child) => child.destroyed)).toBe(true)
   expect(base.children[0]!.calls[0]!.options.responseConstraint).toHaveProperty('required', ['q0'])
   expect(one.response.usage).toEqual({ input_tokens: 100 })
-  expect(one.responseFormat).toBe('compact')
+  expect(one.raw).toBe(base.result)
+  expect(one.response.answers.result).toEqual({ type: 'noul', noul: 0.8 })
+  expect(one.responseFormat).toBe('decision')
   engine.destroy()
   expect(base.destroyed).toBe(true)
 })
@@ -74,7 +76,7 @@ test('never exposes a malformed or truncated answer as success', async () => {
   for (const overflow of [false, true]) {
     const base = new Session()
     base.overflow = overflow
-    base.result = overflow ? '{"q0":0.8}' : 'not json'
+    base.result = overflow ? '{"q0":{"answer":true,"confidence":0.8}}' : 'not json'
     const engine = new PromptEngine(factory(base))
     const signal = new AbortController().signal
     await engine.initialize(signal, () => {})
@@ -91,7 +93,7 @@ test('cancellation cannot publish a late response', async () => {
     const child = new Session()
     child.prompt = async () => {
       controller.abort()
-      return '{"q0":1}'
+      return '{"q0":{"answer":true,"confidence":1}}'
     }
     base.children.push(child)
     return child

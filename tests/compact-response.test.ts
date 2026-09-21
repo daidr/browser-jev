@@ -14,15 +14,26 @@ const nested = {
   q1: { noul: compact.q1 },
   q2: { probabilities: compact.q2 },
 }
+const decision = { ...compact, q1: { answer: true, confidence: compact.q1 } }
 
-test('compact inference preserves the complete external Jev response', () => {
+test('explicit decisions preserve the external Jev response across all inference formats', () => {
   const usage = { input_tokens: 301 }
-  expect(decodeResponse(request, JSON.stringify(compact), usage)).toEqual(
+  const current = decodeResponse(request, JSON.stringify(decision), usage)
+  expect(current).toEqual(decodeResponse(request, JSON.stringify(compact), usage, 'compact'))
+  expect(current).toEqual(
     decodeResponse(request, JSON.stringify(nested), usage, 'nested'),
   )
   const properties = createPlan(request).schema.properties as Record<string, unknown>
   expect(properties.q0).toMatchObject({ required: ['billing', 'technical', 'account'] })
-  expect(properties.q1).toEqual({ type: 'number', minimum: 0, maximum: 1 })
+  expect(properties.q1).toEqual({
+    type: 'object',
+    properties: {
+      answer: { type: 'boolean' },
+      confidence: { type: 'number', minimum: 0.5, maximum: 1 },
+    },
+    required: ['answer', 'confidence'],
+    additionalProperties: false,
+  })
   expect(properties.q2).toMatchObject({ required: ['0', '1', '2'] })
 })
 
@@ -37,7 +48,7 @@ test('compact inference rejects missing, invalid, extra and legacy fields', () =
     { ...compact, q1: { noul: 0.95 } },
     nested,
   ])
-    expect(() => decodeResponse(request, JSON.stringify(output))).toThrow()
+    expect(() => decodeResponse(request, JSON.stringify(output), {}, 'compact')).toThrow()
 })
 
 test('candidate names that match old wrappers remain ordinary candidates', () => {
@@ -65,11 +76,20 @@ test('history restores old and new wire formats without trusting saved answers',
     createdAt: '2026-09-21T00:00:00Z',
   }
   const oldRecord = { ...common, raw: JSON.stringify(nested) }
-  const newRecord = { ...common, raw: JSON.stringify(compact), responseFormat: 'compact' }
-  const restored = restoreHistory([oldRecord, newRecord])
-  expect(restored).toHaveLength(2)
+  const compactRecord = { ...common, raw: JSON.stringify(compact), responseFormat: 'compact' }
+  const newRecord = { ...common, raw: JSON.stringify(decision), responseFormat: 'decision' }
+  const restored = restoreHistory([oldRecord, compactRecord, newRecord])
+  expect(restored).toHaveLength(3)
   expect(restored[0]!.response).toEqual(restored[1]!.response)
+  expect(restored[0]!.response).toEqual(restored[2]!.response)
   expect(restored[1]).toHaveProperty('responseFormat', 'compact')
+  expect(restored[2]).toHaveProperty('responseFormat', 'decision')
   expect(restoreHistory([{ ...newRecord, responseFormat: 'unknown' }])).toEqual([])
   expect(restoreHistory([{ ...newRecord, raw: JSON.stringify(nested) }])).toEqual([])
+  expect(restoreHistory([{ ...newRecord, raw: JSON.stringify(compact) }])).toEqual([])
+  expect(restoreHistory([{ ...compactRecord, raw: JSON.stringify(decision) }])).toEqual([])
+  const negative = restoreHistory([
+    { ...newRecord, raw: JSON.stringify({ ...decision, q1: { answer: false, confidence: 0.95 } }) },
+  ])
+  expect((negative[0]!.response.answers.needs_human as { noul: number }).noul).toBeCloseTo(0.05)
 })

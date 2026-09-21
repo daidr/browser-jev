@@ -1,4 +1,4 @@
-import { decodeResponse, isRecord, validateRequest } from './contract'
+import { CURRENT_RESPONSE_FORMAT, decodeResponse, isRecord, validateRequest } from './contract'
 import type { Evaluation } from './prompt-api'
 
 function count(value: unknown): number | undefined {
@@ -24,7 +24,8 @@ export function restoreHistory(value: unknown): Evaluation[] {
       const savedUsage = isRecord(savedResponse.usage) ? savedResponse.usage : {}
       const inputTokens = count(savedUsage.input_tokens)
       const format = item.responseFormat ?? 'nested'
-      if (format !== 'compact' && format !== 'nested') return []
+      if (format !== CURRENT_RESPONSE_FORMAT && format !== 'compact' && format !== 'nested')
+        return []
       // Recompute answers from validated raw output, while retaining recorded input usage.
       const response = decodeResponse(
         request,
